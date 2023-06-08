@@ -64,6 +64,7 @@ project(":core") {
         api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
         api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
         api "com.badlogicgames.box2dlights:box2dlights:$box2DLightsVersion"
-        
+        implementation "com.code-disaster.steamworks4j:steamworks4j:1.9.0"
+        implementation "com.code-disaster.steamworks4j:steamworks4j-server:1.9.0"
     }
 }

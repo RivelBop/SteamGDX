@@ -25,7 +25,7 @@ public class SteamGDX extends Game {
 		
 		batch = new SpriteBatch();
 		
-		
+		setScreen(new LobbyMenu(this));
 	}
 
 	@Override

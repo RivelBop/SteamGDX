@@ -3,11 +3,25 @@ package com.rivelbop.steam;
 import com.badlogic.gdx.Gdx;
 import com.codedisaster.steamworks.SteamAPI;
 import com.codedisaster.steamworks.SteamException;
+import com.codedisaster.steamworks.SteamFriends;
+import com.codedisaster.steamworks.SteamFriends.OverlayDialog;
+import com.codedisaster.steamworks.SteamMatchmaking;
+import com.codedisaster.steamworks.SteamMatchmaking.LobbyType;
+import com.codedisaster.steamworks.SteamNetworking;
 
 public class Steam {
 	
 	public static int appID;
 	private static boolean isInit;
+	
+	public static SteamFriends friends;
+	private static FriendsCallback friendsCallback;
+	
+	public static SteamMatchmaking matchmaking;
+	private static MatchmakingCallback matchmakingCallback;
+	
+	public static SteamNetworking networking;
+	private static NetworkingCallback networkingCallback;
 	
 	public static void init(int steamAppID) {
 		// Attempt to initialize steam with the given appID
@@ -29,6 +43,22 @@ public class Steam {
 		} catch (SteamException e) {
 			e.printStackTrace();
 		}
+		
+		// Initialize the Steam objects
+		
+		// MAKE THESE INTO SEPERATE CLASSES
+		
+		friendsCallback = new FriendsCallback();
+		friends = new SteamFriends(friendsCallback);
+		friends.activateGameOverlay(OverlayDialog.Friends);
+		
+		matchmakingCallback = new MatchmakingCallback();
+		matchmaking = new SteamMatchmaking(matchmakingCallback);
+		matchmaking.createLobby(LobbyType.FriendsOnly, 4);
+		
+		networkingCallback = new NetworkingCallback();
+		networking = new SteamNetworking(networkingCallback);
+		
 	}
 	
 	// Check if Steam is running

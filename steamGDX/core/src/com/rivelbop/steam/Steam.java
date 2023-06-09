@@ -15,13 +15,13 @@ public class Steam {
 	private static boolean isInit;
 	
 	public static SteamFriends friends;
-	private static FriendsCallback friendsCallback;
+	public static FriendsCallback friendsCallback;
 	
 	public static SteamMatchmaking matchmaking;
-	private static MatchmakingCallback matchmakingCallback;
+	public static MatchmakingCallback matchmakingCallback;
 	
 	public static SteamNetworking networking;
-	private static NetworkingCallback networkingCallback;
+	public static NetworkingCallback networkingCallback;
 	
 	public static void init(int steamAppID) {
 		// Attempt to initialize steam with the given appID
@@ -45,9 +45,6 @@ public class Steam {
 		}
 		
 		// Initialize the Steam objects
-		
-		// MAKE THESE INTO SEPERATE CLASSES
-		
 		friendsCallback = new FriendsCallback();
 		friends = new SteamFriends(friendsCallback);
 		friends.activateGameOverlay(OverlayDialog.Friends);
@@ -58,7 +55,6 @@ public class Steam {
 		
 		networkingCallback = new NetworkingCallback();
 		networking = new SteamNetworking(networkingCallback);
-		
 	}
 	
 	// Check if Steam is running

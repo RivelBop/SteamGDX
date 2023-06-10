@@ -2,6 +2,7 @@ package com.rivelbop.steamgdx;
 
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.codedisaster.steamworks.SteamMatchmaking.LobbyType;
 import com.rivelbop.steam.Steam;
 
 public class LobbyMenu implements Screen{
@@ -16,13 +17,14 @@ public class LobbyMenu implements Screen{
 	@Override
 	public void show() {
 		font = new BitmapFont();
+		Steam.createLobby(LobbyType.Public, 4);
 	}
 
 	@Override
 	public void render(float delta) {
 		steamGDX.camera.update();
 		steamGDX.batch.begin();
-		if(Steam.matchmakingCallback.lobbyID != null) font.draw(steamGDX.batch, Integer.toString(Steam.matchmakingCallback.lobbyID.getAccountID()), 50, 50);
+		if(Steam.getLobbyID() != null) font.draw(steamGDX.batch, Integer.toString(Steam.getLobbyID().getAccountID()), 50, 50);
 		steamGDX.batch.end();
 	}
 

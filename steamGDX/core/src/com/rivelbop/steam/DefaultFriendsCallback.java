@@ -5,7 +5,7 @@ import com.codedisaster.steamworks.SteamFriendsCallback;
 import com.codedisaster.steamworks.SteamID;
 import com.codedisaster.steamworks.SteamResult;
 
-public class FriendsCallback implements SteamFriendsCallback{
+public class DefaultFriendsCallback implements SteamFriendsCallback{
 
 	@Override
 	public void onSetPersonaNameResponse(boolean success, boolean localSuccess, SteamResult result) {

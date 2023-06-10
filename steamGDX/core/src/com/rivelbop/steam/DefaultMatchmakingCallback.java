@@ -7,7 +7,7 @@ import com.codedisaster.steamworks.SteamMatchmaking.ChatRoomEnterResponse;
 import com.codedisaster.steamworks.SteamMatchmakingCallback;
 import com.codedisaster.steamworks.SteamResult;
 
-public class MatchmakingCallback implements SteamMatchmakingCallback{
+public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	
 	public SteamID lobbyID;
 	

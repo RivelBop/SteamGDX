@@ -18,6 +18,7 @@ public class LobbyMenu implements Screen{
 	public void show() {
 		font = new BitmapFont();
 		Steam.createLobby(LobbyType.Public, 4);
+		Steam.sendMessageToLobby("Hey!");
 	}
 
 	@Override

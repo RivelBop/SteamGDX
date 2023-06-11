@@ -15,6 +15,8 @@ import com.codedisaster.steamworks.SteamNetworkingCallback;
 
 public class Steam {
 	
+	// java -jar test.jar    FOR CONSOLE USE WITH JAR
+	
 	private static int appID;
 	private static boolean isInit;
 	
@@ -71,8 +73,7 @@ public class Steam {
 	public static boolean update() {
 		if (isInit && SteamAPI.isSteamRunning()) {
 			SteamAPI.runCallbacks();
-			if(!isInviteInit && inLobby && matchmakingCallback instanceof DefaultMatchmakingCallback
-					&& getLobbyID() != null) {
+			if(!isInviteInit && inLobby()) {
 				friends.activateGameOverlayInviteDialog(getLobbyID());
 				isInviteInit = true;
 			}
@@ -82,11 +83,11 @@ public class Steam {
 	}
 	
 	// Create a lobby with the publicity and player count
-	// ADD ISHOST *
 	public static void createLobby(LobbyType type, int players) {
 		if(isInit) {
 			matchmaking.createLobby(type, players);
 			inLobby = true;
+			isHost = true;
 		}
 	}
 	
@@ -95,7 +96,13 @@ public class Steam {
 		if(isInit) {
 			matchmaking.joinLobby(id);
 			inLobby = true;
+			isHost = false;
 		}
+	}
+	
+	// Check if it is default
+	public static void sendMessageToLobby(String message) {
+		if(inLobby()) matchmaking.sendLobbyChatMsg(getLobbyID(), message);
 	}
 	
 	public static int getAppID() {
@@ -111,21 +118,20 @@ public class Steam {
 	}
 	
 	public static SteamID getLobbyID() {
-		if(matchmakingCallback instanceof DefaultMatchmakingCallback) {
+		if(checkIfDefault(Callback.MATCHMAKING)) {
 			return ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID;
 		}
 		return null;
 	}
 	
 	public static boolean inLobby() {
-		return inLobby;
+		return (inLobby && getLobbyID() != null) || (inLobby && !checkIfDefault(Callback.MATCHMAKING));
 	}
 	
 	public static SteamNetworking getNetworking() {
 		return networking;
 	}
 	
-	// USE FOR CODE*
 	private static boolean checkIfDefault(Callback callback) {
 		switch(callback) {
 			case FRIENDS:

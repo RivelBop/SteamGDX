@@ -1,5 +1,6 @@
 package com.rivelbop.steamgdx;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.codedisaster.steamworks.SteamMatchmaking.LobbyType;
@@ -9,6 +10,7 @@ public class LobbyMenu implements Screen{
 	
 	public SteamGDX steamGDX;
 	public BitmapFont font;
+	public float timer;
 	
 	public LobbyMenu(SteamGDX game) {
 		steamGDX = game;
@@ -18,12 +20,20 @@ public class LobbyMenu implements Screen{
 	public void show() {
 		font = new BitmapFont();
 		Steam.createLobby(LobbyType.Public, 4);
-		Steam.sendMessageToLobby("Hey!");
 	}
 
 	@Override
 	public void render(float delta) {
 		steamGDX.camera.update();
+		
+		timer += Gdx.graphics.getDeltaTime();
+		
+		if(timer >= 3) {
+			timer = 0;
+			Steam.sendMessageToLobby("This is a message!");
+			System.out.println("Message sent!");
+		}
+		
 		steamGDX.batch.begin();
 		if(Steam.getLobbyID() != null) font.draw(steamGDX.batch, Integer.toString(Steam.getLobbyID().getAccountID()), 50, 50);
 		steamGDX.batch.end();

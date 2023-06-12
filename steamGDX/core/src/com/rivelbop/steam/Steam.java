@@ -18,24 +18,26 @@ public class Steam {
 	// java -jar test.jar    FOR CONSOLE USE WITH JAR
 	
 	private static int appID;
-	private static boolean isInit;
+	private static float updateTimer;
 	
 	private static SteamFriends friends;
 	public static SteamFriendsCallback friendsCallback;
 	
 	private static SteamMatchmaking matchmaking;
 	public static SteamMatchmakingCallback matchmakingCallback;
-	private static boolean inLobby, isHost, isInviteInit;
+	private static boolean inLobby, isHost;
 	
 	private static SteamNetworking networking;
 	public static SteamNetworkingCallback networkingCallback;
 	
+	// Callback enums used to check if the callbacks are default
 	private static enum Callback{
 		FRIENDS,
 		MATCHMAKING,
 		NETWORKING;
 	}
 	
+	// Initialize the SteamAPI
 	public static void init(int steamAppID) {
 		// Attempt to initialize steam with the given appID
 		try {
@@ -51,11 +53,12 @@ public class Steam {
 				System.err.println("Steam API initialization error!");
 			} else {
 				System.out.println("Steam API has been successfully initialized!");
-				isInit = true;
 			}
 		} catch (SteamException e) {
 			e.printStackTrace();
 		}
+		
+		updateTimer = 0f;
 		
 		// Initialize the Steam objects
 		if(friendsCallback == null) friendsCallback = new DefaultFriendsCallback();
@@ -70,13 +73,15 @@ public class Steam {
 	}
 	
 	// Check if Steam is running
-	public static boolean update() {
-		if (isInit && SteamAPI.isSteamRunning()) {
+	public static boolean update(float updateRate) {
+		if(updateTimer < updateRate && SteamAPI.isSteamRunning()) {
+			updateTimer += Gdx.graphics.getDeltaTime();
+			return true;
+		}
+		if (SteamAPI.isSteamRunning()) {
 			SteamAPI.runCallbacks();
-			if(!isInviteInit && inLobby()) {
-				friends.activateGameOverlayInviteDialog(getLobbyID());
-				isInviteInit = true;
-			}
+			System.out.println("SteamAPI as been updated!");
+			updateTimer = 0f;
 			return true;
 		}
 		return false;
@@ -84,7 +89,7 @@ public class Steam {
 	
 	// Create a lobby with the publicity and player count
 	public static void createLobby(LobbyType type, int players) {
-		if(isInit) {
+		if(SteamAPI.isSteamRunning()) {
 			matchmaking.createLobby(type, players);
 			inLobby = true;
 			isHost = true;
@@ -93,7 +98,7 @@ public class Steam {
 	
 	// Join a lobby with the given ID
 	public static void joinLobby(SteamID id) {
-		if(isInit) {
+		if(SteamAPI.isSteamRunning()) {
 			matchmaking.joinLobby(id);
 			inLobby = true;
 			isHost = false;
@@ -105,18 +110,27 @@ public class Steam {
 		if(inLobby()) matchmaking.sendLobbyChatMsg(getLobbyID(), message);
 	}
 	
+	// Retrieve the provided AppID
 	public static int getAppID() {
 		return appID;
 	}
 	
+	// Check to see if the SteamAPI is running
+	public boolean isRunning() {
+		return SteamAPI.isSteamRunning();
+	}
+	
+	// Retrieve the SteamFriends object
 	public static SteamFriends getFriends() {
 		return friends;
 	}
 	
+	// Retrieve the SteamMatchmaking object
 	public static SteamMatchmaking getMatchmaking() {
 		return matchmaking;
 	}
 	
+	// Return the lobbyID stored in the DefaultMatchmakingCallback
 	public static SteamID getLobbyID() {
 		if(checkIfDefault(Callback.MATCHMAKING)) {
 			return ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID;
@@ -124,14 +138,17 @@ public class Steam {
 		return null;
 	}
 	
+	// Check to see if the player is in a lobby
 	public static boolean inLobby() {
 		return (inLobby && getLobbyID() != null) || (inLobby && !checkIfDefault(Callback.MATCHMAKING));
 	}
 	
+	// Retrieve the SteamNetworking object
 	public static SteamNetworking getNetworking() {
 		return networking;
 	}
 	
+	// Check to see if the provided Callback enum correlates to a default callback object
 	private static boolean checkIfDefault(Callback callback) {
 		switch(callback) {
 			case FRIENDS:

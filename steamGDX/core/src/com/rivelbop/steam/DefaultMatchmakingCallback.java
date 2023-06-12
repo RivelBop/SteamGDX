@@ -1,11 +1,6 @@
 package com.rivelbop.steam;
 
-import java.nio.ByteBuffer;
-
-import com.badlogic.gdx.Gdx;
-import com.codedisaster.steamworks.SteamException;
 import com.codedisaster.steamworks.SteamID;
-import com.codedisaster.steamworks.SteamMatchmaking.ChatEntry;
 import com.codedisaster.steamworks.SteamMatchmaking.ChatEntryType;
 import com.codedisaster.steamworks.SteamMatchmaking.ChatMemberStateChange;
 import com.codedisaster.steamworks.SteamMatchmaking.ChatRoomEnterResponse;
@@ -14,9 +9,7 @@ import com.codedisaster.steamworks.SteamResult;
 
 public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	
-	public ChatEntry chatEntry;
 	public SteamID lobbyID;
-	public ByteBuffer dest;
 	
 	@Override
 	public void onFavoritesListChanged(int ip, int queryPort, int connPort, int appID, int flags, boolean add,
@@ -48,13 +41,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 
 	@Override
 	public void onLobbyChatMessage(SteamID steamIDLobby, SteamID steamIDUser, ChatEntryType entryType, int chatID) {
-		if(chatEntry == null) chatEntry = new ChatEntry();
-		try {
-			Steam.getMatchmaking().getLobbyChatEntry(steamIDLobby, chatID, chatEntry, dest);
-			System.out.println(dest.toString() + " From: " + chatEntry.getSteamIDUser().getAccountID());
-		} catch (SteamException e) {
-			e.printStackTrace();
-		}
+		
 	}
 
 	@Override

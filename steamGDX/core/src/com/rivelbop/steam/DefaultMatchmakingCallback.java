@@ -32,7 +32,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	@Override
 	public void onLobbyEnter(SteamID steamIDLobby, int chatPermissions, boolean blocked,
 			ChatRoomEnterResponse response) {
-		
+		lobbyID = steamIDLobby;
 	}
 
 	@Override
@@ -77,7 +77,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 
 	@Override
 	public void onLobbyCreated(SteamResult result, SteamID steamIDLobby) {
-		lobbyID = steamIDLobby;
+		
 	}
 	
 	@Override

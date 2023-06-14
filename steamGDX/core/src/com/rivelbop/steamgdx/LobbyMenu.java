@@ -2,15 +2,29 @@ package com.rivelbop.steamgdx;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.scenes.scene2d.Event;
+import com.badlogic.gdx.scenes.scene2d.EventListener;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.codedisaster.steamworks.SteamID;
 import com.codedisaster.steamworks.SteamMatchmaking.LobbyType;
 import com.rivelbop.steam.Steam;
 
 public class LobbyMenu implements Screen{
 	
 	public SteamGDX steamGDX;
-	public BitmapFont font;
-	public float timer;
+	
+	public Stage stage;
+	public Skin skin;
+	public Label createLobbyLabel, joinLobbyLabel, serverID, messageLabel, messages;
+	public TextButton createLobbyButton, joinLobbyButton, messageButton;
+	public TextField joinLobbyID, messageField;
+	
+	public int messageCount;
+	public float yOffset = 300;
 	
 	public LobbyMenu(SteamGDX game) {
 		steamGDX = game;
@@ -18,25 +32,105 @@ public class LobbyMenu implements Screen{
 	
 	@Override
 	public void show() {
-		font = new BitmapFont();
-		Steam.createLobby(LobbyType.Public, 4);
+		skin = new Skin(Gdx.files.internal("default/skin/uiskin.json"));
+        stage = new Stage(steamGDX.viewport);
+        messageCount = 0;
+		
+		createLobbyLabel = new Label("Host Lobby:", skin);
+		createLobbyLabel.setPosition(steamGDX.viewport.getScreenWidth() / 2 - createLobbyLabel.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 + createLobbyLabel.getHeight() * 2 + yOffset);
+        stage.addActor(createLobbyLabel);
+		
+        createLobbyButton = new TextButton("Host", skin);
+        createLobbyButton.setSize(80, 25);
+        createLobbyButton.setPosition(steamGDX.viewport.getScreenWidth() / 2 - createLobbyButton.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 + createLobbyButton.getHeight() + yOffset);
+        createLobbyButton.addListener(new EventListener() {
+            @Override
+            public boolean handle(Event event) {
+                if(event.isHandled()) Steam.createLobby(LobbyType.Public, 4);
+                return false;
+            }
+        });
+        stage.addActor(createLobbyButton);
+        
+        joinLobbyLabel = new Label("Join Lobby: ", skin);
+        joinLobbyLabel.setPosition(steamGDX.viewport.getScreenWidth() / 2 - joinLobbyLabel.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 - joinLobbyLabel.getHeight() * 2 + yOffset);
+        stage.addActor(joinLobbyLabel);
+        
+        joinLobbyID = new TextField("", skin);
+        joinLobbyID.setPosition(steamGDX.viewport.getScreenWidth() / 2 - joinLobbyID.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 - joinLobbyID.getHeight() * 3 + yOffset);
+        stage.addActor(joinLobbyID);
+        
+        joinLobbyButton = new TextButton("Join", skin);
+        joinLobbyButton.setSize(80, 25);
+        joinLobbyButton.setPosition(steamGDX.viewport.getScreenWidth() / 2 - joinLobbyButton.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 - joinLobbyButton.getHeight() * 5 + yOffset);
+        joinLobbyButton.addListener(new EventListener() {
+            @Override
+            public boolean handle(Event event) {
+            	// CHANGE THIS TO GET ALL THE LOBBIES AND THEN LOOP THROUGH AND
+            	// FIND A LOBBY WITH THE PROVIDED STEAMID MATCHING
+            	// ONCE FOUND, GRAB IT AND PUT IT IN
+                if(event.isHandled()) Steam.joinLobby(SteamID.createFromNativeHandle(Long.parseLong(joinLobbyID.getText())));
+                return false;
+            }
+        });
+        stage.addActor(joinLobbyButton);
+        
+        serverID = new Label("", skin);
+        stage.addActor(serverID);
+        
+        // Message UI
+        messageLabel = new Label("Message:", skin);
+        messageLabel.setPosition(steamGDX.viewport.getScreenWidth() / 2 - messageLabel.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 - 200 + yOffset);
+        messageLabel.setVisible(false);
+        stage.addActor(messageLabel);
+        
+        messageField = new TextField("", skin);
+        messageField.setPosition(steamGDX.viewport.getScreenWidth() / 2 - messageField.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 - 235 + yOffset);
+        messageField.setVisible(false);
+        stage.addActor(messageField);
+        
+        messageButton = new TextButton("Send", skin);
+        messageButton.setSize(80, 25);
+        messageButton.setPosition(steamGDX.viewport.getScreenWidth() / 2 - messageButton.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 - messageButton.getHeight() - 250 + yOffset);
+        messageButton.setVisible(false);
+        messageButton.addListener(new EventListener() {
+            @Override
+            public boolean handle(Event event) {
+                if(event.isHandled() && Steam.inLobby()) Steam.sendLobbyMessage(messageField.getText());
+                return false;
+            }
+        });
+        stage.addActor(messageButton);
+        
+        messages = new Label("", skin);
+        messages.setY(steamGDX.viewport.getScreenHeight() / 2 - 275 + yOffset);
+        messages.setVisible(false);
+        stage.addActor(messages);
+        
+        Gdx.input.setInputProcessor(stage);
 	}
 
 	@Override
 	public void render(float delta) {
 		steamGDX.camera.update();
+		stage.act(Gdx.graphics.getDeltaTime());
 		
-		timer += Gdx.graphics.getDeltaTime();
-		
-		if(timer >= 3) {
-			timer = 0;
-			Steam.sendMessageToLobby("This is a message!");
-			System.out.println("Message sent!");
+		if(Steam.inLobby()) {
+			serverID.setText("Lobby ID: " + Steam.getLobbyID().getAccountID() + "\nCurrent Player Count: " + Steam.lobbyCount());
+			serverID.setPosition(steamGDX.viewport.getScreenWidth() / 2 - serverID.getText().length * 4.5f, steamGDX.viewport.getScreenHeight() / 2 - 200);
+			if(!messages.isVisible()) {
+				messageLabel.setVisible(true);
+				messageField.setVisible(true);
+				messageButton.setVisible(true);
+				messages.setVisible(true);
+			}
+			if(messageCount < Steam.getLobbyMessages().size()) {
+				messages.setText(messages.getText() + "\n" + Steam.getLobbyMessages().get(messageCount).getUserMessage());
+				messageCount++;
+			}
 		}
 		
-		steamGDX.batch.begin();
-		if(Steam.getLobbyID() != null) font.draw(steamGDX.batch, Integer.toString(Steam.getLobbyID().getAccountID()), 50, 50);
-		steamGDX.batch.end();
+        stage.draw();
 	}
 
 	@Override
@@ -56,12 +150,13 @@ public class LobbyMenu implements Screen{
 
 	@Override
 	public void hide() {
-		
+		dispose();
 	}
 
 	@Override
 	public void dispose() {
-		
+		stage.dispose();
+		skin.dispose();
 	}
 	
 }

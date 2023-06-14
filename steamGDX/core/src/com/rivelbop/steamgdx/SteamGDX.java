@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
+import com.codedisaster.steamworks.SteamAPI;
 import com.rivelbop.steam.Steam;
 
 public class SteamGDX extends Game {
@@ -13,7 +14,7 @@ public class SteamGDX extends Game {
 	public OrthographicCamera camera;
 	public StretchViewport viewport;
 	public SpriteBatch batch;
-	public static int screenHeight = 720, screenWidth = screenHeight * 16/9;
+	public static int screenHeight = 1080, screenWidth = screenHeight * 16/9;
 	
 	@Override
 	public void create () {
@@ -40,7 +41,9 @@ public class SteamGDX extends Game {
 	
 	@Override
 	public void dispose () {
+		Steam.dispose();
 		batch.dispose();
+		getScreen().dispose();
 	}
 	
 }

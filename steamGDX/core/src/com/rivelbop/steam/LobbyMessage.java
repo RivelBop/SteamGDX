@@ -9,14 +9,12 @@ public class LobbyMessage {
 	
 	// Private to insure the user cannot alter the data
 	private ChatEntry entry;
-	private ByteBuffer buffer;
-	private int size;
+	private String message;
 	
-	// Create an empty ChatEntry and allocate memory (4096) for the ByteBuffer
+	// Create an empty ChatEntry and String
 	public LobbyMessage() {
 		entry = new ChatEntry();
-		buffer = ByteBuffer.allocateDirect(4096);
-		size = 0;
+		message = "";
 	}
 	
 	// Returns the ChatEntry object stored within the lobby message
@@ -24,29 +22,21 @@ public class LobbyMessage {
 		return entry;
 	}
 	
-	// Returns the ByteBuffer/Byte data stored within the lobby message
-	public ByteBuffer getBuffer() {
-		return buffer;
+	// Returns the message
+	public String getMessage() {
+		return message;
 	}
 	
-	// Returns the size of the data received
-	public int getSize() {
-		return size;
+	// Returns the user name of the player along with the message
+	public String getUserMessage() {
+		return Steam.getUsername(entry.getSteamIDUser()) + ": " + message;
 	}
 	
-	// Sets the size of the data received
-	public void setSize(int providedSize) {
-		size = providedSize;
-	}
-	
-	// Returns the String conversion of the lobby message
-	public String toString() {
-		if(size != 0) {
-			byte[] bytes = new byte[size];
-			buffer.get(bytes);
-			return new String(bytes);
-		}
-		return null;
+	// Converts the provided ByteBuffer into a String
+	public void setMessage(ByteBuffer buffer, int size) {
+		byte[] bytes = new byte[size];
+		buffer.get(bytes);
+		message = new String(bytes);
 	}
 	
 }

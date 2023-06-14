@@ -1,5 +1,6 @@
 package com.rivelbop.steam;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import com.codedisaster.steamworks.SteamException;
 import com.codedisaster.steamworks.SteamID;
@@ -33,11 +34,12 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	public void onLobbyEnter(SteamID steamIDLobby, int chatPermissions, boolean blocked,
 			ChatRoomEnterResponse response) {
 		lobbyID = steamIDLobby;
+		System.out.println("Lobby has been entered!");
 	}
 
 	@Override
 	public void onLobbyDataUpdate(SteamID steamIDLobby, SteamID steamIDMember, boolean success) {
-		
+	
 	}
 
 	@Override
@@ -51,13 +53,17 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 		messages.add(new LobbyMessage());
 		LobbyMessage message = messages.get(messages.size() - 1);
 		
+		ByteBuffer buffer = ByteBuffer.allocateDirect(4096);
+		int size = 0;
+		
 		try {
-			message.setSize(Steam.getMatchmaking().getLobbyChatEntry(steamIDLobby, chatID, message.getChatEntry(), message.getBuffer())); 
+			size = Steam.getMatchmaking().getLobbyChatEntry(steamIDLobby, chatID, message.getChatEntry(), buffer);
 		} catch (SteamException e) {
 			e.printStackTrace();
-		}
+		} 
 		
-		System.out.println(message);
+		message.setMessage(buffer, size);
+		System.out.println(message.getUserMessage());
 	}
 
 	@Override
@@ -77,7 +83,8 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 
 	@Override
 	public void onLobbyCreated(SteamResult result, SteamID steamIDLobby) {
-		
+		lobbyID = steamIDLobby;
+		System.out.println("Lobby Created with ID: " + steamIDLobby.getAccountID());
 	}
 	
 	@Override

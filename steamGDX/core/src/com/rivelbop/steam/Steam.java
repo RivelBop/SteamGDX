@@ -1,7 +1,10 @@
 package com.rivelbop.steam;
 
+import java.util.ArrayList;
+
 import com.badlogic.gdx.Gdx;
 import com.codedisaster.steamworks.SteamAPI;
+import com.codedisaster.steamworks.SteamApps;
 import com.codedisaster.steamworks.SteamException;
 import com.codedisaster.steamworks.SteamFriends;
 import com.codedisaster.steamworks.SteamFriends.OverlayDialog;
@@ -16,9 +19,10 @@ import com.codedisaster.steamworks.SteamNetworkingCallback;
 public class Steam {
 	
 	// java -jar test.jar    FOR CONSOLE USE WITH JAR
-	
 	private static int appID;
 	private static float updateTimer;
+	
+	private static SteamApps apps;
 	
 	private static SteamFriends friends;
 	public static SteamFriendsCallback friendsCallback;
@@ -61,6 +65,8 @@ public class Steam {
 		updateTimer = 0f;
 		
 		// Initialize the Steam objects
+		apps = new SteamApps();
+		
 		if(friendsCallback == null) friendsCallback = new DefaultFriendsCallback();
 		friends = new SteamFriends(friendsCallback);
 		friends.activateGameOverlay(OverlayDialog.Friends);
@@ -74,13 +80,12 @@ public class Steam {
 	
 	// Check if Steam is running
 	public static boolean update(float updateRate) {
-		if(updateTimer < updateRate && SteamAPI.isSteamRunning()) {
+		if(updateTimer < updateRate && isRunning()) {
 			updateTimer += Gdx.graphics.getDeltaTime();
 			return true;
 		}
-		if (SteamAPI.isSteamRunning()) {
+		if (isRunning()) {
 			SteamAPI.runCallbacks();
-			System.out.println("SteamAPI as been updated!");
 			updateTimer = 0f;
 			return true;
 		}
@@ -89,24 +94,32 @@ public class Steam {
 	
 	// Create a lobby with the publicity and player count
 	public static void createLobby(LobbyType type, int players) {
-		if(SteamAPI.isSteamRunning()) {
+		if(!inLobby()) {
 			matchmaking.createLobby(type, players);
 			inLobby = true;
+			isHost = true;
+		}else {
+			matchmaking.leaveLobby(getLobbyID());
+			matchmaking.createLobby(type, players);
 			isHost = true;
 		}
 	}
 	
 	// Join a lobby with the given ID
 	public static void joinLobby(SteamID id) {
-		if(SteamAPI.isSteamRunning()) {
+		if(!inLobby()) {
 			matchmaking.joinLobby(id);
 			inLobby = true;
+			isHost = false;
+		}else {
+			matchmaking.leaveLobby(getLobbyID());
+			matchmaking.joinLobby(id);
 			isHost = false;
 		}
 	}
 	
 	// Check if it is default
-	public static void sendMessageToLobby(String message) {
+	public static void sendLobbyMessage(String message) {
 		if(inLobby()) matchmaking.sendLobbyChatMsg(getLobbyID(), message);
 	}
 	
@@ -116,13 +129,23 @@ public class Steam {
 	}
 	
 	// Check to see if the SteamAPI is running
-	public boolean isRunning() {
+	public static boolean isRunning() {
 		return SteamAPI.isSteamRunning();
+	}
+	
+	// Retrieve the SteamApps object
+	public static SteamApps getApps() {
+		return apps;
 	}
 	
 	// Retrieve the SteamFriends object
 	public static SteamFriends getFriends() {
 		return friends;
+	}
+	
+	// Retrieve the user name of the provided SteamID
+	public static String getUsername(SteamID id) {
+		return friends.getFriendPersonaName(id);
 	}
 	
 	// Retrieve the SteamMatchmaking object
@@ -143,6 +166,18 @@ public class Steam {
 		return (inLobby && getLobbyID() != null) || (inLobby && !checkIfDefault(Callback.MATCHMAKING));
 	}
 	
+	// Return the messages sent in the lobby
+	public static ArrayList<LobbyMessage> getLobbyMessages(){
+		if(checkIfDefault(Callback.MATCHMAKING)) return ((DefaultMatchmakingCallback)matchmakingCallback).messages;
+		return null;
+	}
+	
+	// Returns the number of players in the lobby
+	public static int lobbyCount() {
+		if(inLobby()) return matchmaking.getNumLobbyMembers(getLobbyID());
+		return -1;
+	}
+	
 	// Retrieve the SteamNetworking object
 	public static SteamNetworking getNetworking() {
 		return networking;
@@ -160,6 +195,18 @@ public class Steam {
 			default:
 				return false;
 		}
+	}
+	
+	// Shutdown the SteamAPI
+	public static void dispose() {
+		if(inLobby()) matchmaking.leaveLobby(getLobbyID());
+		
+		apps.dispose();
+		friends.dispose();
+		matchmaking.dispose();
+		networking.dispose();
+		
+		SteamAPI.shutdown();
 	}
 	
 }

@@ -94,28 +94,18 @@ public class Steam {
 	
 	// Create a lobby with the publicity and player count
 	public static void createLobby(LobbyType type, int players) {
-		if(!inLobby()) {
-			matchmaking.createLobby(type, players);
-			inLobby = true;
-			isHost = true;
-		}else {
-			matchmaking.leaveLobby(getLobbyID());
-			matchmaking.createLobby(type, players);
-			isHost = true;
-		}
+		if(inLobby()) leaveLobby();
+		matchmaking.createLobby(type, players);
+		inLobby = true;
+		isHost = true;
 	}
 	
 	// Join a lobby with the given ID
 	public static void joinLobby(SteamID id) {
-		if(!inLobby()) {
-			matchmaking.joinLobby(id);
-			inLobby = true;
-			isHost = false;
-		}else {
-			matchmaking.leaveLobby(getLobbyID());
-			matchmaking.joinLobby(id);
-			isHost = false;
-		}
+		if(inLobby()) leaveLobby();
+		matchmaking.joinLobby(id);
+		inLobby = true;
+		isHost = false;
 	}
 	
 	// Returns the SteamID of the lobby with the provided steamID
@@ -126,7 +116,11 @@ public class Steam {
 	
 	// Leave the lobby
 	public static void leaveLobby() {
-		if(inLobby()) matchmaking.leaveLobby(getLobbyID());
+		if(inLobby()) {
+		 matchmaking.leaveLobby(getLobbyID());
+			inLobby = false;
+			if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID = null;
+		}
 	}
 	
 	// Search for a lobby with the provided id and amount of lobbies
@@ -232,7 +226,7 @@ public class Steam {
 	
 	// Shutdown the SteamAPI
 	public static void dispose() {
-		if(inLobby()) matchmaking.leaveLobby(getLobbyID());
+		leaveLobby();
 		
 		apps.dispose();
 		friends.dispose();

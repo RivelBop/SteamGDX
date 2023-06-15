@@ -117,7 +117,7 @@ public class Steam {
 	// Leave the lobby
 	public static void leaveLobby() {
 		if(inLobby()) {
-		 matchmaking.leaveLobby(getLobbyID());
+			matchmaking.leaveLobby(getLobbyID());
 			inLobby = false;
 			if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID = null;
 		}

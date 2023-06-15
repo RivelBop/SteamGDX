@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.codedisaster.steamworks.SteamException;
 import com.codedisaster.steamworks.SteamID;
 import com.codedisaster.steamworks.SteamMatchmaking.LobbyType;
 import com.rivelbop.steam.Steam;
@@ -66,10 +67,9 @@ public class LobbyMenu implements Screen{
         joinLobbyButton.addListener(new EventListener() {
             @Override
             public boolean handle(Event event) {
-            	// CHANGE THIS TO GET ALL THE LOBBIES AND THEN LOOP THROUGH AND
-            	// FIND A LOBBY WITH THE PROVIDED STEAMID MATCHING
-            	// ONCE FOUND, GRAB IT AND PUT IT IN
-                if(event.isHandled()) Steam.joinLobby(SteamID.createFromNativeHandle(Long.parseLong(joinLobbyID.getText())));
+                if(event.isHandled()) {
+                	Steam.joinLobby(Integer.valueOf(joinLobbyID.getText()));
+                }
                 return false;
             }
         });
@@ -96,7 +96,10 @@ public class LobbyMenu implements Screen{
         messageButton.addListener(new EventListener() {
             @Override
             public boolean handle(Event event) {
-                if(event.isHandled() && Steam.inLobby()) Steam.sendLobbyMessage(messageField.getText());
+                if(event.isHandled() && Steam.inLobby()) {
+                	Steam.sendLobbyMessage(messageField.getText());
+					Steam.sendPacket("Hey!");
+                }
                 return false;
             }
         });
@@ -116,7 +119,7 @@ public class LobbyMenu implements Screen{
 		stage.act(Gdx.graphics.getDeltaTime());
 		
 		if(Steam.inLobby()) {
-			serverID.setText("Lobby ID: " + Steam.getLobbyID().getAccountID() + "\nCurrent Player Count: " + Steam.lobbyCount());
+			serverID.setText("Lobby ID: " + Steam.getLobbyID().getAccountID() + "\nCurrent Player Count: " + Steam.lobbyPlayerCount());
 			serverID.setPosition(steamGDX.viewport.getScreenWidth() / 2 - serverID.getText().length * 4.5f, steamGDX.viewport.getScreenHeight() / 2 - 200);
 			if(!messages.isVisible()) {
 				messageLabel.setVisible(true);

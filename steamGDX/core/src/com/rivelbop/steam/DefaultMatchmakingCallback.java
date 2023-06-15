@@ -12,6 +12,7 @@ import com.codedisaster.steamworks.SteamResult;
 
 public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	
+	public int lobbyCount, joinAttempt;
 	public SteamID lobbyID;
 	public ArrayList<LobbyMessage> messages;
 	
@@ -73,7 +74,12 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 
 	@Override
 	public void onLobbyMatchList(int lobbiesMatching) {
-		
+		lobbyCount = lobbiesMatching;
+		if(joinAttempt != 0) {
+			SteamID lobby = Steam.searchForLobby(joinAttempt, lobbyCount);
+			if(lobby != null) Steam.joinLobby(lobby);
+			joinAttempt = 0;
+		}
 	}
 
 	@Override

@@ -1,7 +1,7 @@
 package com.rivelbop.steam;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
-
 import com.badlogic.gdx.Gdx;
 import com.codedisaster.steamworks.SteamAPI;
 import com.codedisaster.steamworks.SteamApps;
@@ -14,6 +14,7 @@ import com.codedisaster.steamworks.SteamMatchmaking;
 import com.codedisaster.steamworks.SteamMatchmaking.LobbyType;
 import com.codedisaster.steamworks.SteamMatchmakingCallback;
 import com.codedisaster.steamworks.SteamNetworking;
+import com.codedisaster.steamworks.SteamNetworking.P2PSend;
 import com.codedisaster.steamworks.SteamNetworkingCallback;
 
 public class Steam {
@@ -77,7 +78,6 @@ public class Steam {
 		if(networkingCallback == null) networkingCallback = new DefaultNetworkingCallback();
 		networking = new SteamNetworking(networkingCallback);
 	}
-	
 	// Check if Steam is running
 	public static boolean update(float updateRate) {
 		if(updateTimer < updateRate && isRunning()) {
@@ -118,9 +118,39 @@ public class Steam {
 		}
 	}
 	
+	// Returns the SteamID of the lobby with the provided steamID
+	public static void joinLobby(int lobbyID) {
+		if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).joinAttempt = lobbyID;
+		requestLobbyList();
+	}
+	
+	// Leave the lobby
+	public static void leaveLobby() {
+		if(inLobby()) matchmaking.leaveLobby(getLobbyID());
+	}
+	
+	// Search for a lobby with the provided id and amount of lobbies
+	public static SteamID searchForLobby(int lobbyID, int lobbyCount) {
+		for(int i = 0; i < lobbyCount; i++) {
+			SteamID lobby = matchmaking.getLobbyByIndex(i);
+			if(lobby.getAccountID() == lobbyID) return lobby;
+		}
+		return null;
+	}
+	
 	// Check if it is default
 	public static void sendLobbyMessage(String message) {
 		if(inLobby()) matchmaking.sendLobbyChatMsg(getLobbyID(), message);
+	}
+	
+	// Connect the lobby to the SteamNetworking object
+	public static void sendPacket(String message) {
+		if(inLobby())
+			try {
+				networking.sendP2PPacket(getLobbyID(), null, P2PSend.Reliable, 0);
+			} catch (SteamException e) {
+				e.printStackTrace();
+			}
 	}
 	
 	// Retrieve the provided AppID
@@ -155,9 +185,7 @@ public class Steam {
 	
 	// Return the lobbyID stored in the DefaultMatchmakingCallback
 	public static SteamID getLobbyID() {
-		if(checkIfDefault(Callback.MATCHMAKING)) {
-			return ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID;
-		}
+		if(checkIfDefault(Callback.MATCHMAKING)) return ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID;
 		return null;
 	}
 	
@@ -172,8 +200,13 @@ public class Steam {
 		return null;
 	}
 	
+	// Requests the lobby list
+	public static void requestLobbyList() {
+		matchmaking.requestLobbyList();
+	}
+	
 	// Returns the number of players in the lobby
-	public static int lobbyCount() {
+	public static int lobbyPlayerCount() {
 		if(inLobby()) return matchmaking.getNumLobbyMembers(getLobbyID());
 		return -1;
 	}

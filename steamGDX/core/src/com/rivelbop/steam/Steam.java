@@ -1,5 +1,6 @@
 package com.rivelbop.steam;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import com.badlogic.gdx.Gdx;
@@ -16,14 +17,20 @@ import com.codedisaster.steamworks.SteamMatchmakingCallback;
 import com.codedisaster.steamworks.SteamNetworking;
 import com.codedisaster.steamworks.SteamNetworking.P2PSend;
 import com.codedisaster.steamworks.SteamNetworkingCallback;
+import com.codedisaster.steamworks.SteamUser;
+import com.codedisaster.steamworks.SteamUserCallback;
 
 public class Steam {
 	
 	// java -jar test.jar    FOR CONSOLE USE WITH JAR
+	public static final int BUFFERSIZE = 4096;
 	private static int appID;
 	private static float updateTimer;
 	
 	private static SteamApps apps;
+	
+	private static SteamUser user;
+	public static SteamUserCallback userCallback;
 	
 	private static SteamFriends friends;
 	public static SteamFriendsCallback friendsCallback;
@@ -37,6 +44,7 @@ public class Steam {
 	
 	// Callback enums used to check if the callbacks are default
 	private static enum Callback{
+		USER,
 		FRIENDS,
 		MATCHMAKING,
 		NETWORKING;
@@ -47,7 +55,6 @@ public class Steam {
 		// Attempt to initialize steam with the given appID
 		try {
 			SteamAPI.loadLibraries();
-			
 			appID = steamAppID;
 			if(SteamAPI.restartAppIfNecessary(appID)){
 				System.err.println("Steam App connection error!");
@@ -68,6 +75,9 @@ public class Steam {
 		// Initialize the Steam objects
 		apps = new SteamApps();
 		
+		if(userCallback == null) userCallback = new DefaultUserCallback();
+		user = new SteamUser(userCallback);
+		
 		if(friendsCallback == null) friendsCallback = new DefaultFriendsCallback();
 		friends = new SteamFriends(friendsCallback);
 		friends.activateGameOverlay(OverlayDialog.Friends);
@@ -77,15 +87,18 @@ public class Steam {
 		
 		if(networkingCallback == null) networkingCallback = new DefaultNetworkingCallback();
 		networking = new SteamNetworking(networkingCallback);
+		networking.allowP2PPacketRelay(true);
 	}
 	// Check if Steam is running
 	public static boolean update(float updateRate) {
 		if(updateTimer < updateRate && isRunning()) {
 			updateTimer += Gdx.graphics.getDeltaTime();
+			receivePacket();
 			return true;
 		}
 		if (isRunning()) {
 			SteamAPI.runCallbacks();
+			receivePacket();
 			updateTimer = 0f;
 			return true;
 		}
@@ -94,7 +107,7 @@ public class Steam {
 	
 	// Create a lobby with the publicity and player count
 	public static void createLobby(LobbyType type, int players) {
-		if(inLobby()) leaveLobby();
+		leaveLobby();
 		matchmaking.createLobby(type, players);
 		inLobby = true;
 		isHost = true;
@@ -102,7 +115,7 @@ public class Steam {
 	
 	// Join a lobby with the given ID
 	public static void joinLobby(SteamID id) {
-		if(inLobby()) leaveLobby();
+		leaveLobby();
 		matchmaking.joinLobby(id);
 		inLobby = true;
 		isHost = false;
@@ -137,14 +150,78 @@ public class Steam {
 		if(inLobby()) matchmaking.sendLobbyChatMsg(getLobbyID(), message);
 	}
 	
-	// Connect the lobby to the SteamNetworking object
-	public static void sendPacket(String message) {
-		if(inLobby())
+	// Convert String to Directly Allocated ByteBuffer
+	public static ByteBuffer stringToBuffer(String string) {
+		ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFERSIZE);
+		
+		((Buffer)buffer).clear();
+		
+		byte[] bytes = string.getBytes();
+		buffer.put(bytes);
+		
+		((Buffer)buffer).flip();
+		
+		return buffer;
+	}
+	
+	// Send a packet to a lobby using the SteamNetworking object
+	public static void sendLobbyPacket(String message) {
+		if(inLobby()) {
 			try {
-				networking.sendP2PPacket(getLobbyID(), null, P2PSend.Reliable, 0);
+				for(int i = 0; i < lobbyPlayerCount(); i++) {
+					SteamID player = matchmaking.getLobbyMemberByIndex(getLobbyID(), i);
+					if(player.getAccountID() != getUserID().getAccountID()) {
+						networking.sendP2PPacket(player, stringToBuffer(message), P2PSend.Reliable, 0);
+					}
+				}
+				System.out.println("Packet sent with message: |" + message + "| to lobby: " + getLobbyID().getAccountID());
 			} catch (SteamException e) {
 				e.printStackTrace();
 			}
+		}
+	}
+	
+	// Receive a packet from a lobby using the SteamNetworking object
+	public static void receivePacket() {
+		int[] packetSize = new int[1];
+		
+		if(inLobby() && networking.isP2PPacketAvailable(0, packetSize)) {
+			// Entry data objects
+			SteamID player = new SteamID();
+			ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFERSIZE);
+			
+			if(packetSize[0] > buffer.capacity()) {
+				System.err.println("Incoming packet larger than read buffer can handle");
+			}
+			
+			((Buffer)buffer).clear();
+			
+			int packetReadSize = -1;
+			try {
+				packetReadSize = networking.readP2PPacket(player, buffer, 0);
+			} catch (SteamException e) {
+				e.printStackTrace();
+			}
+			
+			if (packetReadSize == 0) {
+				System.err.println("Packet expected " + packetSize[0] + " bytes, but got none");
+			} else if (packetReadSize < packetSize[0]) {
+				System.err.println("Packet expected " + packetSize[0] + " bytes, but only got " + packetReadSize);
+			}
+			
+			buffer.limit(packetReadSize);
+			
+			if(packetReadSize > 0) {
+				int bytesReceived = buffer.limit();
+				System.out.println("Packet recieved by: " + getUsername(player) + ", " + bytesReceived + " bytes");
+	
+				byte[] bytes = new byte[bytesReceived];
+				buffer.get(bytes);
+				
+				String message = new String(bytes);
+				System.out.println("Packet recieved: \"" + message + "\"");
+			}
+		}
 	}
 	
 	// Retrieve the provided AppID
@@ -160,6 +237,16 @@ public class Steam {
 	// Retrieve the SteamApps object
 	public static SteamApps getApps() {
 		return apps;
+	}
+	
+	// Retrieve the SteamUser object
+	public static SteamUser getUser() {
+		return user;
+	}
+	
+	// Retrieve the current users SteamID
+	public static SteamID getUserID() {
+		return user.getSteamID();
 	}
 	
 	// Retrieve the SteamFriends object
@@ -213,6 +300,8 @@ public class Steam {
 	// Check to see if the provided Callback enum correlates to a default callback object
 	private static boolean checkIfDefault(Callback callback) {
 		switch(callback) {
+			case USER:
+				return userCallback instanceof DefaultUserCallback;
 			case FRIENDS:
 				return friendsCallback instanceof DefaultFriendsCallback;
 			case MATCHMAKING:
@@ -229,6 +318,7 @@ public class Steam {
 		leaveLobby();
 		
 		apps.dispose();
+		user.dispose();
 		friends.dispose();
 		matchmaking.dispose();
 		networking.dispose();

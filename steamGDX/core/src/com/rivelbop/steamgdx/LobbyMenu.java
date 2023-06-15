@@ -9,8 +9,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
-import com.codedisaster.steamworks.SteamException;
-import com.codedisaster.steamworks.SteamID;
 import com.codedisaster.steamworks.SteamMatchmaking.LobbyType;
 import com.rivelbop.steam.Steam;
 
@@ -98,7 +96,7 @@ public class LobbyMenu implements Screen{
             public boolean handle(Event event) {
                 if(event.isHandled() && Steam.inLobby()) {
                 	Steam.sendLobbyMessage(messageField.getText());
-					Steam.sendPacket("Hey!");
+					Steam.sendLobbyPacket(messageField.getText());
                 }
                 return false;
             }

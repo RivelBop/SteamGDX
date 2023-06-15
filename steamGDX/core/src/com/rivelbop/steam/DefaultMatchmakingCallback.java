@@ -54,7 +54,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 		messages.add(new LobbyMessage());
 		LobbyMessage message = messages.get(messages.size() - 1);
 		
-		ByteBuffer buffer = ByteBuffer.allocateDirect(4096);
+		ByteBuffer buffer = ByteBuffer.allocateDirect(Steam.BUFFERSIZE);
 		int size = 0;
 		
 		try {

@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
-import com.codedisaster.steamworks.SteamAPI;
 import com.rivelbop.steam.Steam;
 
 public class SteamGDX extends Game {

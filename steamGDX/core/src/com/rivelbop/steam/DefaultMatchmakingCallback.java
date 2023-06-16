@@ -16,6 +16,8 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	public SteamID lobbyID;
 	public ArrayList<LobbyMessage> messages;
 	
+	// ADDED JOIN SEND MESSAGE
+	
 	public DefaultMatchmakingCallback() {
 		messages = new ArrayList<LobbyMessage>();
 	}
@@ -35,6 +37,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	public void onLobbyEnter(SteamID steamIDLobby, int chatPermissions, boolean blocked,
 			ChatRoomEnterResponse response) {
 		lobbyID = steamIDLobby;
+		Steam.sendLobbyMessage(Steam.getUsername(Steam.getUserID()) + " has joined the lobby!");
 		System.out.println("Lobby has been entered!");
 	}
 
@@ -90,6 +93,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	@Override
 	public void onLobbyCreated(SteamResult result, SteamID steamIDLobby) {
 		lobbyID = steamIDLobby;
+		Steam.sendLobbyMessage(Steam.getUsername(Steam.getUserID()) + " has joined the lobby!");
 		System.out.println("Lobby Created with ID: " + steamIDLobby.getAccountID());
 	}
 	

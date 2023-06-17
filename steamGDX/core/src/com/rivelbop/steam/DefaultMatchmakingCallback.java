@@ -16,8 +16,6 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	public SteamID lobbyID;
 	public ArrayList<LobbyMessage> messages;
 	
-	// ADDED JOIN SEND MESSAGE
-	
 	public DefaultMatchmakingCallback() {
 		messages = new ArrayList<LobbyMessage>();
 	}

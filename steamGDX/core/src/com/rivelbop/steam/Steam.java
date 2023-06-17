@@ -266,8 +266,7 @@ public class Steam {
 	
 	// Return the lobbyID stored in the DefaultMatchmakingCallback
 	public static SteamID getLobbyID() {
-		if(checkIfDefault(Callback.MATCHMAKING)) return ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID;
-		return null;
+		return (checkIfDefault(Callback.MATCHMAKING)) ? ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID : null;
 	}
 	
 	// Check to see if the player is in a lobby
@@ -277,8 +276,7 @@ public class Steam {
 	
 	// Return the messages sent in the lobby
 	public static ArrayList<LobbyMessage> getLobbyMessages(){
-		if(checkIfDefault(Callback.MATCHMAKING)) return ((DefaultMatchmakingCallback)matchmakingCallback).messages;
-		return null;
+		return (checkIfDefault(Callback.MATCHMAKING)) ? ((DefaultMatchmakingCallback)matchmakingCallback).messages : null;
 	}
 	
 	// Requests the lobby list
@@ -288,8 +286,19 @@ public class Steam {
 	
 	// Returns the number of players in the lobby
 	public static int lobbyPlayerCount() {
-		if(inLobby()) return matchmaking.getNumLobbyMembers(getLobbyID());
-		return -1;
+		return (inLobby()) ? matchmaking.getNumLobbyMembers(getLobbyID()) : -1;
+	}
+	
+	// Retrieve a list of all players connected to the lobby
+	public static ArrayList<SteamID> playersInLobby(){
+		if(inLobby()) {
+			ArrayList<SteamID> players = new ArrayList<SteamID>();
+			for(int i = 0; i < lobbyPlayerCount(); i++) {
+				players.add(matchmaking.getLobbyMemberByIndex(getLobbyID(), i));
+			}
+			return players;
+		}
+		return null;
 	}
 	
 	// Retrieve the SteamNetworking object

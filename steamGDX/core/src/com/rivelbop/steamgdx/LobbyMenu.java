@@ -1,5 +1,7 @@
 package com.rivelbop.steamgdx;
 
+import java.util.HashMap;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.scenes.scene2d.Event;
@@ -9,7 +11,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.codedisaster.steamworks.SteamID;
 import com.codedisaster.steamworks.SteamMatchmaking.LobbyType;
+import com.rivelbop.steam.LobbyMessage;
 import com.rivelbop.steam.Steam;
 
 public class LobbyMenu implements Screen{
@@ -18,12 +22,15 @@ public class LobbyMenu implements Screen{
 	
 	public Stage stage;
 	public Skin skin;
-	public Label createLobbyLabel, joinLobbyLabel, serverID, messageLabel, messages;
-	public TextButton createLobbyButton, joinLobbyButton, messageButton;
+	public Label createLobbyLabel, joinLobbyLabel, serverID, messageLabel, messages, readyLabel;
+	public TextButton createLobbyButton, joinLobbyButton, messageButton, readyButton;
 	public TextField joinLobbyID, messageField;
+	
+	public HashMap<SteamID, Boolean> playersReady;
 	
 	public int messageCount;
 	public float yOffset = 300;
+	public boolean isReady;
 	
 	public LobbyMenu(SteamGDX game) {
 		steamGDX = game;
@@ -33,7 +40,9 @@ public class LobbyMenu implements Screen{
 	public void show() {
 		skin = new Skin(Gdx.files.internal("default/skin/uiskin.json"));
         stage = new Stage(steamGDX.viewport);
+        playersReady = new HashMap<SteamID, Boolean>();
         messageCount = 0;
+        isReady = false;
 		
 		createLobbyLabel = new Label("Host Lobby:", skin);
 		createLobbyLabel.setPosition(steamGDX.viewport.getScreenWidth() / 2 - createLobbyLabel.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 + createLobbyLabel.getHeight() * 2 + yOffset);
@@ -66,7 +75,11 @@ public class LobbyMenu implements Screen{
             @Override
             public boolean handle(Event event) {
                 if(event.isHandled()) {
-                	Steam.joinLobby(Integer.valueOf(joinLobbyID.getText()));
+                	try {
+                		Steam.joinLobby(Integer.valueOf(joinLobbyID.getText()));
+                	} catch(NumberFormatException e) {
+                		e.printStackTrace();
+                	}
                 }
                 return false;
             }
@@ -94,9 +107,8 @@ public class LobbyMenu implements Screen{
         messageButton.addListener(new EventListener() {
             @Override
             public boolean handle(Event event) {
-                if(event.isHandled() && Steam.inLobby()) {
+                if(event.isHandled()) {
                 	Steam.sendLobbyMessage(messageField.getText());
-					Steam.sendLobbyPacket(messageField.getText());
                 }
                 return false;
             }
@@ -107,6 +119,31 @@ public class LobbyMenu implements Screen{
         messages.setY(steamGDX.viewport.getScreenHeight() / 2 - 275 + yOffset);
         messages.setVisible(false);
         stage.addActor(messages);
+        
+        readyLabel = new Label("Ready Up:", skin);
+        readyLabel.setPosition(steamGDX.viewport.getScreenWidth() / 2 - readyLabel.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 - messageButton.getHeight() - 300 + yOffset);
+        readyLabel.setVisible(false);
+        stage.addActor(readyLabel);
+        
+        readyButton = new TextButton("Ready", skin);
+        readyButton.setPosition(steamGDX.viewport.getScreenWidth() / 2 - readyButton.getWidth() / 2, steamGDX.viewport.getScreenHeight() / 2 - readyButton.getHeight() - 350 + yOffset);
+        readyButton.setVisible(false);
+        readyButton.addListener(new EventListener() {
+            @Override
+            public boolean handle(Event event) {
+                if(event.isHandled() && !isReady && readyButton.isVisible()) {
+                	Steam.sendLobbyMessage(Steam.getUsername(Steam.getUserID()) + " is ready to play!");
+                	readyButton.setText("Not Ready");
+                	isReady = true;
+                }else if(event.isHandled() && isReady && readyButton.isVisible()) {
+                	Steam.sendLobbyMessage(Steam.getUsername(Steam.getUserID()) + " is not ready to play!");
+                	readyButton.setText("Ready");
+                	isReady = false;
+                }
+                return false;
+            }
+        });
+        stage.addActor(readyButton);
         
         Gdx.input.setInputProcessor(stage);
 	}
@@ -125,9 +162,46 @@ public class LobbyMenu implements Screen{
 				messageButton.setVisible(true);
 				messages.setVisible(true);
 			}
+			if(!readyLabel.isVisible() && Steam.lobbyPlayerCount() > 1) {
+				readyLabel.setVisible(true);
+				readyButton.setVisible(true);
+			}else if(Steam.lobbyPlayerCount() <= 1){
+				readyLabel.setVisible(false);
+				readyButton.setVisible(false);
+			}
 			if(messageCount < Steam.getLobbyMessages().size()) {
-				messages.setText(messages.getText() + "\n" + Steam.getLobbyMessages().get(messageCount).getUserMessage());
+				LobbyMessage lobbyMessage = Steam.getLobbyMessages().get(messageCount);
+				String message = lobbyMessage.getMessage();
+				
+				if(message.contains("joined") || message.contains("is not ready")) {
+					playersReady.put(lobbyMessage.getChatEntry().getSteamIDUser(), false);
+					messages.setText(messages.getText() + "\n" + message);
+				}else if(message.contains("is ready")) {
+					playersReady.put(lobbyMessage.getChatEntry().getSteamIDUser(), true);
+					messages.setText(messages.getText() + "\n" + message);
+				}else {
+					messages.setText(messages.getText() + "\n" + lobbyMessage.getUserMessage());
+				}
 				messageCount++;
+			}
+		}else {
+			messageLabel.setVisible(false);
+			messageField.setVisible(false);
+			messageButton.setVisible(false);
+			messages.setVisible(false);
+			readyLabel.setVisible(false);
+			readyButton.setVisible(false);
+		}
+		
+		if(playersReady.size() > 1) {
+			int readyLoop = 1;
+			for(SteamID player : playersReady.keySet()) {
+				if(!playersReady.get(player)) break;
+				if(readyLoop == playersReady.size()) {
+					steamGDX.setScreen(new NetworkGame(steamGDX));
+					break;
+				}
+				readyLoop++;
 			}
 		}
 		

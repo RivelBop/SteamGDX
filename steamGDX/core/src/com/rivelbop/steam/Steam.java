@@ -93,12 +93,10 @@ public class Steam {
 	public static boolean update(float updateRate) {
 		if(updateTimer < updateRate && isRunning()) {
 			updateTimer += Gdx.graphics.getDeltaTime();
-			receivePacket();
 			return true;
 		}
 		if (isRunning()) {
 			SteamAPI.runCallbacks();
-			receivePacket();
 			updateTimer = 0f;
 			return true;
 		}
@@ -182,7 +180,7 @@ public class Steam {
 	}
 	
 	// Receive a packet from a lobby using the SteamNetworking object
-	public static void receivePacket() {
+	public static PacketData receivePacket() {
 		int[] packetSize = new int[1];
 		
 		if(inLobby() && networking.isP2PPacketAvailable(0, packetSize)) {
@@ -209,10 +207,10 @@ public class Steam {
 				System.err.println("Packet expected " + packetSize[0] + " bytes, but only got " + packetReadSize);
 			}
 			
-			buffer.limit(packetReadSize);
+			((Buffer)buffer).limit(packetReadSize);
 			
 			if(packetReadSize > 0) {
-				int bytesReceived = buffer.limit();
+				int bytesReceived = ((Buffer)buffer).limit();
 				System.out.println("Packet recieved by: " + getUsername(player) + ", " + bytesReceived + " bytes");
 	
 				byte[] bytes = new byte[bytesReceived];
@@ -220,8 +218,11 @@ public class Steam {
 				
 				String message = new String(bytes);
 				System.out.println("Packet recieved: \"" + message + "\"");
+				
+				return new PacketData(player, message);
 			}
 		}
+		return null;
 	}
 	
 	// Retrieve the provided AppID

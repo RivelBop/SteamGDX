@@ -230,6 +230,7 @@ public class LobbyMenu implements Screen{
 
 	@Override
 	public void dispose() {
+		stage.clear();
 		stage.dispose();
 		skin.dispose();
 	}

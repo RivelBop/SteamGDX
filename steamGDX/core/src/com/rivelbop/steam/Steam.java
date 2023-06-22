@@ -163,13 +163,13 @@ public class Steam {
 	}
 	
 	// Send a packet to a lobby using the SteamNetworking object
-	public static void sendLobbyPacket(String message) {
+	public static void sendLobbyPacket(String message, P2PSend type) {
 		if(inLobby()) {
 			try {
 				for(int i = 0; i < lobbyPlayerCount(); i++) {
 					SteamID player = matchmaking.getLobbyMemberByIndex(getLobbyID(), i);
 					if(player.getAccountID() != getUserID().getAccountID()) {
-						networking.sendP2PPacket(player, stringToBuffer(message), P2PSend.Reliable, 0);
+						networking.sendP2PPacket(player, stringToBuffer(message), type, 0);
 					}
 				}
 				System.out.println("Packet sent with message: |" + message + "| to lobby: " + getLobbyID().getAccountID());

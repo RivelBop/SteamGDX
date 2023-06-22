@@ -6,6 +6,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Screen;
 import com.codedisaster.steamworks.SteamID;
+import com.codedisaster.steamworks.SteamNetworking.P2PSend;
 import com.rivelbop.steam.PacketData;
 import com.rivelbop.steam.Steam;
 
@@ -50,8 +51,8 @@ public class NetworkGame implements Screen{
 			movedX = true;
 		}
 		
-		if(movedX) Steam.sendLobbyPacket("X: " + players.get(Steam.getUserID()).sprite.getX());
-		if(movedY) Steam.sendLobbyPacket("Y: " + players.get(Steam.getUserID()).sprite.getY());
+		if(movedX) Steam.sendLobbyPacket("X: " + players.get(Steam.getUserID()).sprite.getX(), P2PSend.UnreliableNoDelay);
+		if(movedY) Steam.sendLobbyPacket("Y: " + players.get(Steam.getUserID()).sprite.getY(), P2PSend.UnreliableNoDelay);
 		
 		PacketData packet = Steam.receivePacket();
 		if(packet != null) {

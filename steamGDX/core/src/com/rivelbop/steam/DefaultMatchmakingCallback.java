@@ -35,7 +35,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	public void onLobbyEnter(SteamID steamIDLobby, int chatPermissions, boolean blocked,
 			ChatRoomEnterResponse response) {
 		lobbyID = steamIDLobby;
-		Steam.sendLobbyMessage(Steam.getUsername(Steam.getUserID()) + " has joined the lobby!");
+		Steam.Lobby.sendMessage(Steam.Friends.getUsername(Steam.User.getID()) + " has joined the lobby!");
 		System.out.println("Lobby has been entered!");
 	}
 
@@ -59,7 +59,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 		int size = 0;
 		
 		try {
-			size = Steam.getMatchmaking().getLobbyChatEntry(steamIDLobby, chatID, message.getChatEntry(), buffer);
+			size = Steam.Lobby.get().getLobbyChatEntry(steamIDLobby, chatID, message.getChatEntry(), buffer);
 		} catch (SteamException e) {
 			e.printStackTrace();
 		} 
@@ -77,8 +77,8 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	public void onLobbyMatchList(int lobbiesMatching) {
 		lobbyCount = lobbiesMatching;
 		if(joinAttempt != 0) {
-			SteamID lobby = Steam.searchForLobby(joinAttempt, lobbyCount);
-			if(lobby != null) Steam.joinLobby(lobby);
+			SteamID lobby = Steam.Lobby.search(joinAttempt, lobbyCount);
+			if(lobby != null) Steam.Lobby.join(lobby);
 			joinAttempt = 0;
 		}
 	}
@@ -91,7 +91,7 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 	@Override
 	public void onLobbyCreated(SteamResult result, SteamID steamIDLobby) {
 		lobbyID = steamIDLobby;
-		Steam.sendLobbyMessage(Steam.getUsername(Steam.getUserID()) + " has joined the lobby!");
+		Steam.Lobby.sendMessage(Steam.Friends.getUsername(Steam.User.getID()) + " has joined the lobby!");
 		System.out.println("Lobby Created with ID: " + steamIDLobby.getAccountID());
 	}
 	

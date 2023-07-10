@@ -29,7 +29,7 @@ public class LobbyMessage {
 	
 	// Returns the user name of the player along with the message
 	public String getUserMessage() {
-		return Steam.getUsername(entry.getSteamIDUser()) + ": " + message;
+		return Steam.Friends.getUsername(entry.getSteamIDUser()) + ": " + message;
 	}
 	
 	// Converts the provided ByteBuffer into a String

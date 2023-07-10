@@ -13,7 +13,7 @@ public class DefaultNetworkingCallback implements SteamNetworkingCallback{
 	
 	@Override
 	public void onP2PSessionRequest(SteamID steamIDRemote) {
-		Steam.getNetworking().acceptP2PSessionWithUser(steamIDRemote);
+		Steam.Network.get().acceptP2PSessionWithUser(steamIDRemote);
 		System.out.println("P2P Session Request from SteamID: " + steamIDRemote.getAccountID() + " has been accepted!");
 	}
 

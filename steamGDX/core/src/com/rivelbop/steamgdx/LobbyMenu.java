@@ -28,6 +28,7 @@ public class LobbyMenu implements Screen{
 	
 	public HashMap<SteamID, Boolean> playersReady;
 	
+	public final int START_COUNT = 1;
 	public int messageCount;
 	public float yOffset = 300;
 	public boolean isReady;
@@ -54,7 +55,7 @@ public class LobbyMenu implements Screen{
         createLobbyButton.addListener(new EventListener() {
             @Override
             public boolean handle(Event event) {
-                if(event.isHandled()) Steam.createLobby(LobbyType.Public, 4);
+                if(event.isHandled()) Steam.Lobby.create(LobbyType.Public, 4);
                 return false;
             }
         });
@@ -76,7 +77,7 @@ public class LobbyMenu implements Screen{
             public boolean handle(Event event) {
                 if(event.isHandled()) {
                 	try {
-                		Steam.joinLobby(Integer.valueOf(joinLobbyID.getText()));
+                		Steam.Lobby.join(Integer.valueOf(joinLobbyID.getText()));
                 	} catch(NumberFormatException e) {
                 		e.printStackTrace();
                 	}
@@ -108,7 +109,7 @@ public class LobbyMenu implements Screen{
             @Override
             public boolean handle(Event event) {
                 if(event.isHandled()) {
-                	Steam.sendLobbyMessage(messageField.getText());
+                	Steam.Lobby.sendMessage(messageField.getText());
                 }
                 return false;
             }
@@ -132,15 +133,15 @@ public class LobbyMenu implements Screen{
             @Override
             public boolean handle(Event event) {
                 if(event.isHandled() && !isReady && readyButton.isVisible()) {
-                	Steam.sendLobbyMessage(Steam.getUsername(Steam.getUserID()) + " is ready to play!");
+                	Steam.Lobby.sendMessage(Steam.Friends.getUsername(Steam.User.getID()) + " is ready to play!");
                 	readyButton.setText("Not Ready");
                 	isReady = true;
                 }else if(event.isHandled() && isReady && readyButton.isVisible()) {
-                	Steam.sendLobbyMessage(Steam.getUsername(Steam.getUserID()) + " is not ready to play!");
+                	Steam.Lobby.sendMessage(Steam.Friends.getUsername(Steam.User.getID()) + " is not ready to play!");
                 	readyButton.setText("Ready");
                 	isReady = false;
                 }
-                return false;
+                return true;
             }
         });
         stage.addActor(readyButton);
@@ -153,8 +154,8 @@ public class LobbyMenu implements Screen{
 		steamGDX.camera.update();
 		stage.act(Gdx.graphics.getDeltaTime());
 		
-		if(Steam.inLobby()) {
-			serverID.setText("Lobby ID: " + Steam.getLobbyID().getAccountID() + "\nCurrent Player Count: " + Steam.lobbyPlayerCount());
+		if(Steam.Lobby.inLobby()) {
+			serverID.setText("Lobby ID: " + Steam.Lobby.getID().getAccountID() + "\nCurrent Player Count: " + Steam.Lobby.count());
 			serverID.setPosition(steamGDX.viewport.getScreenWidth() / 2 - serverID.getText().length * 4.5f, steamGDX.viewport.getScreenHeight() / 2 - 200);
 			if(!messages.isVisible()) {
 				messageLabel.setVisible(true);
@@ -162,15 +163,15 @@ public class LobbyMenu implements Screen{
 				messageButton.setVisible(true);
 				messages.setVisible(true);
 			}
-			if(!readyLabel.isVisible() && Steam.lobbyPlayerCount() > 1) {
+			if(!readyLabel.isVisible() && Steam.Lobby.count() > START_COUNT - 1) {
 				readyLabel.setVisible(true);
 				readyButton.setVisible(true);
-			}else if(Steam.lobbyPlayerCount() <= 1){
+			}else if(Steam.Lobby.count() <= START_COUNT - 1){
 				readyLabel.setVisible(false);
 				readyButton.setVisible(false);
 			}
-			if(messageCount < Steam.getLobbyMessages().size()) {
-				LobbyMessage lobbyMessage = Steam.getLobbyMessages().get(messageCount);
+			if(messageCount < Steam.Lobby.getMessages().size()) {
+				LobbyMessage lobbyMessage = Steam.Lobby.getMessages().get(messageCount);
 				String message = lobbyMessage.getMessage();
 				
 				if(message.contains("joined") || message.contains("is not ready")) {
@@ -193,7 +194,7 @@ public class LobbyMenu implements Screen{
 			readyButton.setVisible(false);
 		}
 		
-		if(playersReady.size() > 1) {
+		if(playersReady.size() > START_COUNT - 1) {
 			int readyLoop = 1;
 			for(SteamID player : playersReady.keySet()) {
 				if(!playersReady.get(player)) break;

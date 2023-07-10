@@ -24,8 +24,8 @@ public class DefaultFriendsCallback implements SteamFriendsCallback{
 
 	@Override
 	public void onGameLobbyJoinRequested(SteamID steamIDLobby, SteamID steamIDFriend) {
-		System.out.println("Invited by: " + Steam.getUsername(steamIDFriend) + " LobbyID: " + steamIDLobby.getAccountID());
-		Steam.joinLobby(steamIDLobby);
+		System.out.println("Invited by: " + Steam.Friends.getUsername(steamIDFriend) + " LobbyID: " + steamIDLobby.getAccountID());
+		Steam.Lobby.join(steamIDLobby);
 	}
 
 	@Override

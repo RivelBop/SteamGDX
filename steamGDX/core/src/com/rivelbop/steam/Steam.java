@@ -3,6 +3,7 @@ package com.rivelbop.steam;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+
 import com.badlogic.gdx.Gdx;
 import com.codedisaster.steamworks.SteamAPI;
 import com.codedisaster.steamworks.SteamApps;
@@ -18,13 +19,12 @@ import com.codedisaster.steamworks.SteamNetworking;
 import com.codedisaster.steamworks.SteamNetworking.P2PSend;
 import com.codedisaster.steamworks.SteamNetworkingCallback;
 import com.codedisaster.steamworks.SteamUser;
+import com.codedisaster.steamworks.SteamUser.VoiceResult;
 import com.codedisaster.steamworks.SteamUserCallback;
 
 public class Steam {
 	
-	// java -jar test.jar    FOR CONSOLE USE WITH JAR
 	public static final int BUFFERSIZE = 4096;
-	private static int appID;
 	private static float updateTimer;
 	
 	private static SteamApps apps;
@@ -43,11 +43,17 @@ public class Steam {
 	public static SteamNetworkingCallback networkingCallback;
 	
 	// Callback enums used to check if the callbacks are default
-	private static enum Callback{
+	private static enum Callback {
 		USER,
 		FRIENDS,
 		MATCHMAKING,
 		NETWORKING;
+	}
+	
+	public static class Channel {
+		public static final int 
+			MESSAGE = 0,
+			VOICE = 1;
 	}
 	
 	// Initialize the SteamAPI
@@ -55,13 +61,12 @@ public class Steam {
 		// Attempt to initialize steam with the given appID
 		try {
 			SteamAPI.loadLibraries();
-			appID = steamAppID;
-			if(SteamAPI.restartAppIfNecessary(appID)){
+			if(SteamAPI.restartAppIfNecessary(steamAppID)){
 				System.err.println("Steam App connection error!");
 				Gdx.app.exit();
 			}
 			
-			if (!SteamAPI.init()) {
+			if(!SteamAPI.init()) {
 				System.err.println("Steam API initialization error!");
 			} else {
 				System.out.println("Steam API has been successfully initialized!");
@@ -95,57 +100,12 @@ public class Steam {
 			updateTimer += Gdx.graphics.getDeltaTime();
 			return true;
 		}
-		if (isRunning()) {
+		if(isRunning()) {
 			SteamAPI.runCallbacks();
 			updateTimer = 0f;
 			return true;
 		}
 		return false;
-	}
-	
-	// Create a lobby with the publicity and player count
-	public static void createLobby(LobbyType type, int players) {
-		leaveLobby();
-		matchmaking.createLobby(type, players);
-		inLobby = true;
-		isHost = true;
-	}
-	
-	// Join a lobby with the given ID
-	public static void joinLobby(SteamID id) {
-		leaveLobby();
-		matchmaking.joinLobby(id);
-		inLobby = true;
-		isHost = false;
-	}
-	
-	// Returns the SteamID of the lobby with the provided steamID
-	public static void joinLobby(int lobbyID) {
-		if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).joinAttempt = lobbyID;
-		requestLobbyList();
-	}
-	
-	// Leave the lobby
-	public static void leaveLobby() {
-		if(inLobby()) {
-			matchmaking.leaveLobby(getLobbyID());
-			inLobby = false;
-			if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID = null;
-		}
-	}
-	
-	// Search for a lobby with the provided id and amount of lobbies
-	public static SteamID searchForLobby(int lobbyID, int lobbyCount) {
-		for(int i = 0; i < lobbyCount; i++) {
-			SteamID lobby = matchmaking.getLobbyByIndex(i);
-			if(lobby.getAccountID() == lobbyID) return lobby;
-		}
-		return null;
-	}
-	
-	// Check if it is default
-	public static void sendLobbyMessage(String message) {
-		if(inLobby()) matchmaking.sendLobbyChatMsg(getLobbyID(), message);
 	}
 	
 	// Convert String to Directly Allocated ByteBuffer
@@ -162,149 +122,9 @@ public class Steam {
 		return buffer;
 	}
 	
-	// Send a packet to a lobby using the SteamNetworking object
-	public static void sendLobbyPacket(String message, P2PSend type) {
-		if(inLobby()) {
-			try {
-				for(int i = 0; i < lobbyPlayerCount(); i++) {
-					SteamID player = matchmaking.getLobbyMemberByIndex(getLobbyID(), i);
-					if(player.getAccountID() != getUserID().getAccountID()) {
-						networking.sendP2PPacket(player, stringToBuffer(message), type, 0);
-					}
-				}
-				System.out.println("Packet sent with message: |" + message + "| to lobby: " + getLobbyID().getAccountID());
-			} catch (SteamException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-	
-	// Receive a packet from a lobby using the SteamNetworking object
-	public static PacketData receivePacket() {
-		int[] packetSize = new int[1];
-		
-		if(inLobby() && networking.isP2PPacketAvailable(0, packetSize)) {
-			// Entry data objects
-			SteamID player = new SteamID();
-			ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFERSIZE);
-			
-			if(packetSize[0] > buffer.capacity()) {
-				System.err.println("Incoming packet larger than read buffer can handle");
-			}
-			
-			((Buffer)buffer).clear();
-			
-			int packetReadSize = -1;
-			try {
-				packetReadSize = networking.readP2PPacket(player, buffer, 0);
-			} catch (SteamException e) {
-				e.printStackTrace();
-			}
-			
-			if (packetReadSize == 0) {
-				System.err.println("Packet expected " + packetSize[0] + " bytes, but got none");
-			} else if (packetReadSize < packetSize[0]) {
-				System.err.println("Packet expected " + packetSize[0] + " bytes, but only got " + packetReadSize);
-			}
-			
-			((Buffer)buffer).limit(packetReadSize);
-			
-			if(packetReadSize > 0) {
-				int bytesReceived = ((Buffer)buffer).limit();
-				System.out.println("Packet recieved by: " + getUsername(player) + ", " + bytesReceived + " bytes");
-	
-				byte[] bytes = new byte[bytesReceived];
-				buffer.get(bytes);
-				
-				String message = new String(bytes);
-				System.out.println("Packet recieved: \"" + message + "\"");
-				
-				return new PacketData(player, message);
-			}
-		}
-		return null;
-	}
-	
-	// Retrieve the provided AppID
-	public static int getAppID() {
-		return appID;
-	}
-	
 	// Check to see if the SteamAPI is running
 	public static boolean isRunning() {
 		return SteamAPI.isSteamRunning();
-	}
-	
-	// Retrieve the SteamApps object
-	public static SteamApps getApps() {
-		return apps;
-	}
-	
-	// Retrieve the SteamUser object
-	public static SteamUser getUser() {
-		return user;
-	}
-	
-	// Retrieve the current users SteamID
-	public static SteamID getUserID() {
-		return user.getSteamID();
-	}
-	
-	// Retrieve the SteamFriends object
-	public static SteamFriends getFriends() {
-		return friends;
-	}
-	
-	// Retrieve the user name of the provided SteamID
-	public static String getUsername(SteamID id) {
-		return friends.getFriendPersonaName(id);
-	}
-	
-	// Retrieve the SteamMatchmaking object
-	public static SteamMatchmaking getMatchmaking() {
-		return matchmaking;
-	}
-	
-	// Return the lobbyID stored in the DefaultMatchmakingCallback
-	public static SteamID getLobbyID() {
-		return (checkIfDefault(Callback.MATCHMAKING)) ? ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID : null;
-	}
-	
-	// Check to see if the player is in a lobby
-	public static boolean inLobby() {
-		return (inLobby && getLobbyID() != null) || (inLobby && !checkIfDefault(Callback.MATCHMAKING));
-	}
-	
-	// Return the messages sent in the lobby
-	public static ArrayList<LobbyMessage> getLobbyMessages(){
-		return (checkIfDefault(Callback.MATCHMAKING)) ? ((DefaultMatchmakingCallback)matchmakingCallback).messages : null;
-	}
-	
-	// Requests the lobby list
-	public static void requestLobbyList() {
-		matchmaking.requestLobbyList();
-	}
-	
-	// Returns the number of players in the lobby
-	public static int lobbyPlayerCount() {
-		return (inLobby()) ? matchmaking.getNumLobbyMembers(getLobbyID()) : -1;
-	}
-	
-	// Retrieve a list of all players connected to the lobby
-	public static ArrayList<SteamID> playersInLobby(){
-		if(inLobby()) {
-			ArrayList<SteamID> players = new ArrayList<SteamID>();
-			for(int i = 0; i < lobbyPlayerCount(); i++) {
-				players.add(matchmaking.getLobbyMemberByIndex(getLobbyID(), i));
-			}
-			return players;
-		}
-		return null;
-	}
-	
-	// Retrieve the SteamNetworking object
-	public static SteamNetworking getNetworking() {
-		return networking;
 	}
 	
 	// Check to see if the provided Callback enum correlates to a default callback object
@@ -323,9 +143,287 @@ public class Steam {
 		}
 	}
 	
+	public static class App {
+		
+		// Retrieve the provided AppID
+		public static int getID() {
+			return apps.getAppBuildId();
+		}
+		
+		// Retrieve the SteamApps object
+		public static SteamApps get() {
+			return apps;
+		}
+		
+	}
+	
+	public static class User {
+		
+		private static boolean voiceStarted = false;
+		
+		// Voice chat
+		public static void startVoice() {
+			if(!voiceStarted) {
+				user.startVoiceRecording();
+				voiceStarted = true;
+				System.out.println("Voice Recording Has Started!");
+			}
+		}
+		
+		public static void sendVoice(P2PSend packetType) {
+			int[] voiceBytes = new int[1];
+			VoiceResult result = user.getAvailableVoice(voiceBytes);
+			
+			if(result == VoiceResult.OK) {
+				ByteBuffer buffer = ByteBuffer.allocateDirect(1024);
+				try {
+					user.getVoice(buffer, voiceBytes);
+					((Buffer)buffer).flip();
+					System.out.println(buffer.capacity());
+					Lobby.sendPacket(buffer, packetType, Channel.VOICE);
+					System.out.println("Voice Message Has Been Sent!");
+				} catch (SteamException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		public static ByteBuffer getVoice(ByteBuffer buffer) {
+			int[] bytesWritten = new int[1];
+			ByteBuffer audio = ByteBuffer.allocateDirect(1024);
+			try {
+				user.decompressVoice(buffer, audio, bytesWritten, user.getVoiceOptimalSampleRate());
+				return audio;
+			} catch (SteamException e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
+		
+		public static void stopVoice() {
+			if(voiceStarted) {
+				user.stopVoiceRecording();
+				voiceStarted = false;
+				System.out.println("Voice Recording Has Stopped!");
+			}
+		}
+		
+		// Retrieve the current users SteamID
+		public static SteamID getID() {
+			return user.getSteamID();
+		}
+		
+		// Retrieve the SteamUser object
+		public static SteamUser get() {
+			return user;
+		}
+		
+	}
+	
+	public static class Friends {
+		
+		// Retrieve the user name of the provided SteamID
+		public static String getUsername(SteamID id) {
+			return friends.getFriendPersonaName(id);
+		}
+		
+		// Retrieve the SteamFriends object
+		public static SteamFriends get() {
+			return friends;
+		}
+		
+	}
+	
+	public static class Lobby {
+		
+		// Create a lobby with the publicity and player count
+		public static void create(LobbyType type, int players) {
+			leave();
+			matchmaking.createLobby(type, players);
+			inLobby = true;
+			isHost = true;
+		}
+		
+		// Join a lobby with the provided SteamID
+		public static void join(SteamID id) {
+			leave();
+			matchmaking.joinLobby(id);
+			inLobby = true;
+			isHost = false;
+		}
+		
+		// Join a lobby with the provided ID
+		public static void join(int lobbyID) {
+			if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).joinAttempt = lobbyID;
+			requestList();
+		}
+		
+		// Leave the lobby
+		public static void leave() {
+			if(inLobby()) {
+				matchmaking.leaveLobby(getID());
+				inLobby = false;
+				if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID = null;
+			}
+		}
+		
+		// Search for a lobby with the provided id and amount of lobbies
+		public static SteamID search(int lobbyID, int lobbyCount) {
+			for(int i = 0; i < lobbyCount; i++) {
+				SteamID lobby = matchmaking.getLobbyByIndex(i);
+				if(lobby.getAccountID() == lobbyID) return lobby;
+			}
+			return null;
+		}
+		
+		// Sends a String message to the joined lobby
+		public static void sendMessage(String message) {
+			if(inLobby()) matchmaking.sendLobbyChatMsg(getID(), message);
+		}
+		
+		// Send a packet to a lobby using the SteamNetworking object
+		public static void sendPacket(String message, P2PSend type, int channel) {
+			if(inLobby()) {
+				try {
+					for(int i = 0; i < count(); i++) {
+						SteamID player = matchmaking.getLobbyMemberByIndex(getID(), i);
+						if(player.getAccountID() != User.getID().getAccountID()) {
+							networking.sendP2PPacket(player, stringToBuffer(message), type, channel);
+						}
+					}
+					System.out.println("Packet sent with message: |" + message + "| to lobby: " + Lobby.getID().getAccountID());
+				} catch (SteamException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		public static void sendPacket(ByteBuffer message, P2PSend type, int channel) {
+			if(inLobby()) {
+				try {
+					for(int i = 0; i < count(); i++) {
+						SteamID player = matchmaking.getLobbyMemberByIndex(getID(), i);
+						if(player.getAccountID() != User.getID().getAccountID()) {
+							networking.sendP2PPacket(player, message, type, channel);
+						}
+					}
+					System.out.println("ByteBuffer sent to lobby: " + getID().getAccountID());
+				} catch (SteamException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		// Return the lobbyID stored in the DefaultMatchmakingCallback
+		public static SteamID getID() {
+			return (checkIfDefault(Callback.MATCHMAKING)) ? ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID : null;
+		}
+		
+		// Check to see if the player is in a lobby
+		public static boolean inLobby() {
+			return (inLobby && getID() != null) || (inLobby && !checkIfDefault(Callback.MATCHMAKING));
+		}
+		
+		// Return the messages sent in the lobby
+		public static ArrayList<LobbyMessage> getMessages(){
+			return (checkIfDefault(Callback.MATCHMAKING)) ? ((DefaultMatchmakingCallback)matchmakingCallback).messages : null;
+		}
+		
+		// Requests the lobby list
+		public static void requestList() {
+			matchmaking.requestLobbyList();
+		}
+		
+		// Returns the number of players in the lobby
+		public static int count() {
+			return (inLobby()) ? matchmaking.getNumLobbyMembers(getID()) : -1;
+		}
+		
+		// Retrieve a list of all players connected to the lobby
+		public static ArrayList<SteamID> players(){
+			if(inLobby()) {
+				ArrayList<SteamID> players = new ArrayList<SteamID>();
+				for(int i = 0; i < count(); i++) {
+					players.add(matchmaking.getLobbyMemberByIndex(getID(), i));
+				}
+				return players;
+			}
+			return null;
+		}
+		
+		// Retrieve the SteamMatchmaking object
+		public static SteamMatchmaking get() {
+			return matchmaking;
+		}
+		
+	}
+	
+	public static class Network {
+		
+		// Receive a packet from a lobby using the SteamNetworking object
+		public static PacketData receivePacket(int channel) {
+			int[] packetSize = new int[1];
+			
+			if(Lobby.inLobby() && networking.isP2PPacketAvailable(0, packetSize)) {
+				// Entry data objects
+				SteamID player = new SteamID();
+				ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFERSIZE);
+				
+				if(packetSize[0] > buffer.capacity()) {
+					System.err.println("Incoming packet larger than read buffer can handle");
+				}
+				
+				((Buffer)buffer).clear();
+				
+				int packetReadSize = -1;
+				try {
+					packetReadSize = networking.readP2PPacket(player, buffer, channel);
+				} catch (SteamException e) {
+					e.printStackTrace();
+				}
+				
+				if(packetReadSize == 0) {
+					System.err.println("Packet expected " + packetSize[0] + " bytes, but got none");
+				} else if (packetReadSize < packetSize[0]) {
+					System.err.println("Packet expected " + packetSize[0] + " bytes, but only got " + packetReadSize);
+				}
+				
+				((Buffer)buffer).limit(packetReadSize);
+				
+				if(packetReadSize > 0) {
+					int bytesReceived = ((Buffer)buffer).limit();
+					System.out.println("Packet recieved by: " + Friends.getUsername(player) + ", " + bytesReceived + " bytes");
+					
+					switch(channel) {
+						case Channel.MESSAGE:
+							byte[] bytes = new byte[bytesReceived];
+							buffer.get(bytes);
+							
+							String message = new String(bytes);
+							System.out.println("Packet recieved: \"" + message + "\"");
+							
+							return new PacketData(player, message);
+						case Channel.VOICE:
+							return new PacketData(player, buffer);
+						default:
+							System.err.println("This channel is unknown!");
+							return null;
+					}
+				}
+			}
+			return null;
+		}
+		
+		// Retrieve the SteamNetworking object
+		public static SteamNetworking get() {
+			return networking;
+		}
+		
+	}
+	
 	// Shutdown the SteamAPI
 	public static void dispose() {
-		leaveLobby();
+		Lobby.leave();
 		
 		apps.dispose();
 		user.dispose();

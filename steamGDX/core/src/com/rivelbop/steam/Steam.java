@@ -24,7 +24,7 @@ import com.codedisaster.steamworks.SteamUserCallback;
 
 public class Steam {
 	
-	public static final int BUFFERSIZE = 4096;
+	public static final int BUFFERSIZE = 4096, VOICEBUFFERSIZE = 1024;
 	private static float updateTimer;
 	
 	private static SteamApps apps;
@@ -175,7 +175,7 @@ public class Steam {
 			VoiceResult result = user.getAvailableVoice(voiceBytes);
 			
 			if(result == VoiceResult.OK) {
-				ByteBuffer buffer = ByteBuffer.allocateDirect(1024);
+				ByteBuffer buffer = ByteBuffer.allocateDirect(VOICEBUFFERSIZE);
 				try {
 					user.getVoice(buffer, voiceBytes);
 					((Buffer)buffer).flip();
@@ -190,7 +190,7 @@ public class Steam {
 		
 		public static ByteBuffer getVoice(ByteBuffer buffer) {
 			int[] bytesWritten = new int[1];
-			ByteBuffer audio = ByteBuffer.allocateDirect(1024);
+			ByteBuffer audio = ByteBuffer.allocateDirect(VOICEBUFFERSIZE);
 			try {
 				user.decompressVoice(buffer, audio, bytesWritten, user.getVoiceOptimalSampleRate());
 				return audio;

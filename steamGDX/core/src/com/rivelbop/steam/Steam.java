@@ -9,7 +9,6 @@ import com.codedisaster.steamworks.SteamAPI;
 import com.codedisaster.steamworks.SteamApps;
 import com.codedisaster.steamworks.SteamException;
 import com.codedisaster.steamworks.SteamFriends;
-import com.codedisaster.steamworks.SteamFriends.OverlayDialog;
 import com.codedisaster.steamworks.SteamFriendsCallback;
 import com.codedisaster.steamworks.SteamID;
 import com.codedisaster.steamworks.SteamMatchmaking;
@@ -50,6 +49,7 @@ public class Steam {
 		NETWORKING;
 	}
 	
+	// Predetermined channels to send data over
 	public static class Channel {
 		public static final int 
 			MESSAGE = 0,
@@ -66,16 +66,12 @@ public class Steam {
 				Gdx.app.exit();
 			}
 			
-			if(!SteamAPI.init()) {
-				System.err.println("Steam API initialization error!");
-			} else {
-				System.out.println("Steam API has been successfully initialized!");
-			}
+			if(!SteamAPI.init()) System.err.println("Steam API initialization error!");
+			else System.out.println("Steam API has been successfully initialized!");
+			
 		} catch (SteamException e) {
 			e.printStackTrace();
 		}
-		
-		updateTimer = 0f;
 		
 		// Initialize the Steam objects
 		apps = new SteamApps();
@@ -85,7 +81,6 @@ public class Steam {
 		
 		if(friendsCallback == null) friendsCallback = new DefaultFriendsCallback();
 		friends = new SteamFriends(friendsCallback);
-		friends.activateGameOverlay(OverlayDialog.Friends);
 		
 		if(matchmakingCallback == null) matchmakingCallback = new DefaultMatchmakingCallback();
 		matchmaking = new SteamMatchmaking(matchmakingCallback);
@@ -94,25 +89,25 @@ public class Steam {
 		networking = new SteamNetworking(networkingCallback);
 		networking.allowP2PPacketRelay(true);
 	}
+	
 	// Check if Steam is running
 	public static boolean update(float updateRate) {
-		if(updateTimer < updateRate && isRunning()) {
-			updateTimer += Gdx.graphics.getDeltaTime();
-			return true;
-		}
 		if(isRunning()) {
+			if(updateTimer < updateRate) {
+				updateTimer += Gdx.graphics.getDeltaTime();
+				return true;
+			}
 			SteamAPI.runCallbacks();
 			updateTimer = 0f;
 			return true;
 		}
+		
 		return false;
 	}
 	
 	// Convert String to Directly Allocated ByteBuffer
 	public static ByteBuffer stringToBuffer(String string) {
 		ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFERSIZE);
-		
-		((Buffer)buffer).clear();
 		
 		byte[] bytes = string.getBytes();
 		buffer.put(bytes);
@@ -159,7 +154,7 @@ public class Steam {
 	
 	public static class User {
 		
-		private static boolean voiceStarted = false;
+		private static boolean voiceStarted;
 		
 		// Voice chat
 		public static void startVoice() {
@@ -170,7 +165,8 @@ public class Steam {
 			}
 		}
 		
-		public static void sendVoice(P2PSend packetType) {
+		// Send a Voice Message to the specified SteamID
+		public static void sendVoiceToUser(SteamID id, P2PSend packetType) {
 			int[] voiceBytes = new int[1];
 			VoiceResult result = user.getAvailableVoice(voiceBytes);
 			
@@ -179,9 +175,24 @@ public class Steam {
 				try {
 					user.getVoice(buffer, voiceBytes);
 					((Buffer)buffer).flip();
-					System.out.println(buffer.capacity());
+					Network.sendPacket(id, buffer, packetType, Channel.VOICE);
+				} catch (SteamException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		// Send a Voice Message to the Lobby the user is currently inside of
+		public static void sendVoiceToLobby(P2PSend packetType) {
+			int[] voiceBytes = new int[1];
+			VoiceResult result = user.getAvailableVoice(voiceBytes);
+			
+			if(result == VoiceResult.OK) {
+				ByteBuffer buffer = ByteBuffer.allocateDirect(VOICEBUFFERSIZE);
+				try {
+					user.getVoice(buffer, voiceBytes);
+					((Buffer)buffer).flip();
 					Lobby.sendPacket(buffer, packetType, Channel.VOICE);
-					System.out.println("Voice Message Has Been Sent!");
 				} catch (SteamException e) {
 					e.printStackTrace();
 				}
@@ -191,12 +202,14 @@ public class Steam {
 		public static ByteBuffer getVoice(ByteBuffer buffer) {
 			int[] bytesWritten = new int[1];
 			ByteBuffer audio = ByteBuffer.allocateDirect(VOICEBUFFERSIZE);
+			
 			try {
 				user.decompressVoice(buffer, audio, bytesWritten, user.getVoiceOptimalSampleRate());
 				return audio;
 			} catch (SteamException e) {
 				e.printStackTrace();
 			}
+			
 			return null;
 		}
 		
@@ -254,7 +267,9 @@ public class Steam {
 		
 		// Join a lobby with the provided ID
 		public static void join(int lobbyID) {
-			if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).joinAttempt = lobbyID;
+			if(checkIfDefault(Callback.MATCHMAKING))
+				((DefaultMatchmakingCallback)matchmakingCallback).joinAttempt = lobbyID;
+			
 			requestList();
 		}
 		
@@ -263,7 +278,9 @@ public class Steam {
 			if(inLobby()) {
 				matchmaking.leaveLobby(getID());
 				inLobby = false;
-				if(checkIfDefault(Callback.MATCHMAKING)) ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID = null;
+				
+				if(checkIfDefault(Callback.MATCHMAKING))
+					((DefaultMatchmakingCallback)matchmakingCallback).lobbyID = null;
 			}
 		}
 		
@@ -281,42 +298,29 @@ public class Steam {
 			if(inLobby()) matchmaking.sendLobbyChatMsg(getID(), message);
 		}
 		
-		// Send a packet to a lobby using the SteamNetworking object
+		// Send a string packet to a lobby using the SteamNetworking object
 		public static void sendPacket(String message, P2PSend type, int channel) {
 			if(inLobby()) {
-				try {
-					for(int i = 0; i < count(); i++) {
-						SteamID player = matchmaking.getLobbyMemberByIndex(getID(), i);
-						if(player.getAccountID() != User.getID().getAccountID()) {
-							networking.sendP2PPacket(player, stringToBuffer(message), type, channel);
-						}
-					}
-					System.out.println("Packet sent with message: |" + message + "| to lobby: " + Lobby.getID().getAccountID());
-				} catch (SteamException e) {
-					e.printStackTrace();
-				}
+				for(int i = 0; i < count(); i++)
+					Network.sendPacket(matchmaking.getLobbyMemberByIndex(getID(), i), message, type, channel);
+				
+				//System.out.println("Packet sent with message: |" + message + "| to lobby: " + getID().getAccountID());
 			}
 		}
 		
+		// Send a buffer packet to a lobby using the SteamNetworking object
 		public static void sendPacket(ByteBuffer message, P2PSend type, int channel) {
 			if(inLobby()) {
-				try {
-					for(int i = 0; i < count(); i++) {
-						SteamID player = matchmaking.getLobbyMemberByIndex(getID(), i);
-						if(player.getAccountID() != User.getID().getAccountID()) {
-							networking.sendP2PPacket(player, message, type, channel);
-						}
-					}
-					System.out.println("ByteBuffer sent to lobby: " + getID().getAccountID());
-				} catch (SteamException e) {
-					e.printStackTrace();
-				}
+				for(int i = 0; i < count(); i++)
+					Network.sendPacket(matchmaking.getLobbyMemberByIndex(getID(), i), message, type, channel);
+				
+				//System.out.println("ByteBuffer sent to lobby: " + getID().getAccountID());
 			}
 		}
 		
 		// Return the lobbyID stored in the DefaultMatchmakingCallback
 		public static SteamID getID() {
-			return (checkIfDefault(Callback.MATCHMAKING)) ? ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID : null;
+			return checkIfDefault(Callback.MATCHMAKING) ? ((DefaultMatchmakingCallback)matchmakingCallback).lobbyID : null;
 		}
 		
 		// Check to see if the player is in a lobby
@@ -326,7 +330,7 @@ public class Steam {
 		
 		// Return the messages sent in the lobby
 		public static ArrayList<LobbyMessage> getMessages(){
-			return (checkIfDefault(Callback.MATCHMAKING)) ? ((DefaultMatchmakingCallback)matchmakingCallback).messages : null;
+			return checkIfDefault(Callback.MATCHMAKING) ? ((DefaultMatchmakingCallback)matchmakingCallback).messages : null;
 		}
 		
 		// Requests the lobby list
@@ -336,16 +340,16 @@ public class Steam {
 		
 		// Returns the number of players in the lobby
 		public static int count() {
-			return (inLobby()) ? matchmaking.getNumLobbyMembers(getID()) : -1;
+			return inLobby() ? matchmaking.getNumLobbyMembers(getID()) : -1;
 		}
 		
 		// Retrieve a list of all players connected to the lobby
 		public static ArrayList<SteamID> players(){
 			if(inLobby()) {
 				ArrayList<SteamID> players = new ArrayList<SteamID>();
-				for(int i = 0; i < count(); i++) {
+				for(int i = 0; i < count(); i++)
 					players.add(matchmaking.getLobbyMemberByIndex(getID(), i));
-				}
+				
 				return players;
 			}
 			return null;
@@ -359,21 +363,41 @@ public class Steam {
 	}
 	
 	public static class Network {
+		// Send a string packet to a user using the SteamNetworking object
+		public static void sendPacket(SteamID id, String message, P2PSend type, int channel) {
+			try {
+				if(id != User.getID())
+					networking.sendP2PPacket(id, stringToBuffer(message), type, channel);
+				
+				System.out.println("Packet sent with message: |" + message + "| to user: " + id.getAccountID());
+			} catch (SteamException e) {
+				e.printStackTrace();
+			}
+		}
 		
-		// Receive a packet from a lobby using the SteamNetworking object
+		// Send a buffer packet to a user using the SteamNetworking object
+		public static void sendPacket(SteamID id, ByteBuffer message, P2PSend type, int channel) {
+			try {
+				if(id != User.getID()) 
+					networking.sendP2PPacket(id, message, type, channel);
+
+				System.out.println("ByteBuffer sent to user: " + id.getAccountID());
+			} catch (SteamException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		// Receive a packet using the SteamNetworking object
 		public static PacketData receivePacket(int channel) {
 			int[] packetSize = new int[1];
 			
-			if(Lobby.inLobby() && networking.isP2PPacketAvailable(0, packetSize)) {
+			if(networking.isP2PPacketAvailable(channel, packetSize)) {
 				// Entry data objects
 				SteamID player = new SteamID();
 				ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFERSIZE);
 				
-				if(packetSize[0] > buffer.capacity()) {
+				if(packetSize[0] > buffer.capacity())
 					System.err.println("Incoming packet larger than read buffer can handle");
-				}
-				
-				((Buffer)buffer).clear();
 				
 				int packetReadSize = -1;
 				try {
@@ -382,11 +406,10 @@ public class Steam {
 					e.printStackTrace();
 				}
 				
-				if(packetReadSize == 0) {
+				if(packetReadSize == 0)
 					System.err.println("Packet expected " + packetSize[0] + " bytes, but got none");
-				} else if (packetReadSize < packetSize[0]) {
+				else if (packetReadSize < packetSize[0])
 					System.err.println("Packet expected " + packetSize[0] + " bytes, but only got " + packetReadSize);
-				}
 				
 				((Buffer)buffer).limit(packetReadSize);
 				

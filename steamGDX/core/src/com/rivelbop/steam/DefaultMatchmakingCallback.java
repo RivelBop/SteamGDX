@@ -90,9 +90,11 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 
 	@Override
 	public void onLobbyCreated(SteamResult result, SteamID steamIDLobby) {
-		lobbyID = steamIDLobby;
-		Steam.Lobby.sendMessage(Steam.Friends.getUsername(Steam.User.getID()) + " has joined the lobby!");
-		System.out.println("Lobby Created with ID: " + steamIDLobby.getAccountID());
+		if(result == SteamResult.OK) {
+			lobbyID = steamIDLobby;
+			Steam.Lobby.sendMessage(Steam.Friends.getUsername(Steam.User.getID()) + " has joined the lobby!");
+			System.out.println("Lobby Created with ID: " + steamIDLobby.getAccountID());
+		}
 	}
 	
 	@Override

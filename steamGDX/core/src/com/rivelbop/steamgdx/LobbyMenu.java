@@ -28,7 +28,7 @@ public class LobbyMenu implements Screen{
 	
 	public HashMap<SteamID, Boolean> playersReady;
 	
-	public final int START_COUNT = 1;
+	public final int START_COUNT = 2;
 	public int messageCount;
 	public float yOffset = 300;
 	public boolean isReady;
@@ -41,7 +41,7 @@ public class LobbyMenu implements Screen{
 	public void show() {
 		skin = new Skin(Gdx.files.internal("default/skin/uiskin.json"));
         stage = new Stage(steamGDX.viewport);
-        playersReady = new HashMap<SteamID, Boolean>();
+        playersReady = new HashMap<>();
         messageCount = 0;
         isReady = false;
 		
@@ -194,7 +194,7 @@ public class LobbyMenu implements Screen{
 			readyButton.setVisible(false);
 		}
 		
-		if(playersReady.size() > START_COUNT - 1) {
+		if(playersReady.size() >= START_COUNT) {
 			int readyLoop = 1;
 			for(SteamID player : playersReady.keySet()) {
 				if(!playersReady.get(player)) break;

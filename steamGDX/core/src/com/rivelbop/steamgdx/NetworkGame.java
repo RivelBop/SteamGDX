@@ -10,7 +10,6 @@ import javax.sound.sampled.Clip;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import com.badlogic.gdx.Audio;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Input.Keys;
@@ -33,7 +32,7 @@ public class NetworkGame implements Screen{
 	
 	@Override
 	public void show() {
-		players = new HashMap<SteamID, PlayerData>();
+		players = new HashMap<>();
 		for(SteamID player : Steam.Lobby.players()) {
 			players.put(player, new PlayerData());
 		}
@@ -65,7 +64,7 @@ public class NetworkGame implements Screen{
 		if(movedY) Steam.Lobby.sendPacket("Y: " + players.get(Steam.User.getID()).sprite.getY(), P2PSend.ReliableWithBuffering, Steam.Channel.MESSAGE);
 		
 		if(Gdx.input.isKeyJustPressed(Input.Keys.F)) Steam.User.startVoice();
-		Steam.User.sendVoice(P2PSend.ReliableWithBuffering);
+		Steam.User.sendVoiceToLobby(P2PSend.ReliableWithBuffering);
 		if(!Gdx.input.isKeyPressed(Input.Keys.F)) Steam.User.stopVoice();
 		
 		PacketData packet = Steam.Network.receivePacket(Steam.Channel.MESSAGE);
@@ -80,7 +79,7 @@ public class NetworkGame implements Screen{
 		
 		packet = Steam.Network.receivePacket(Steam.Channel.VOICE);
 		if(packet != null) {
-			byte[] bytes = new byte[1024];
+			byte[] bytes = new byte[Steam.VOICEBUFFERSIZE];
 			packet.buffer.get(bytes);
 			System.out.println(bytes);
 			ByteArrayInputStream oInstream = new ByteArrayInputStream(bytes);
@@ -92,14 +91,11 @@ public class NetworkGame implements Screen{
 					clip.open(oAIS);
 					clip.start();
 				} catch (LineUnavailableException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			} catch (UnsupportedAudioFileException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

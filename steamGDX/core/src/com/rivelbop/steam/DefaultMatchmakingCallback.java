@@ -10,25 +10,25 @@ import com.codedisaster.steamworks.SteamMatchmaking.ChatRoomEnterResponse;
 import com.codedisaster.steamworks.SteamMatchmakingCallback;
 import com.codedisaster.steamworks.SteamResult;
 
-public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
-	
+public class DefaultMatchmakingCallback implements SteamMatchmakingCallback {
+
 	public int lobbyCount, joinAttempt;
 	public SteamID lobbyID;
 	public ArrayList<LobbyMessage> messages;
-	
+
 	public DefaultMatchmakingCallback() {
 		messages = new ArrayList<LobbyMessage>();
 	}
-	
+
 	@Override
 	public void onFavoritesListChanged(int ip, int queryPort, int connPort, int appID, int flags, boolean add,
 			int accountID) {
-		
+
 	}
 
 	@Override
 	public void onLobbyInvite(SteamID steamIDUser, SteamID steamIDLobby, long gameID) {
-		
+
 	}
 
 	@Override
@@ -41,65 +41,66 @@ public class DefaultMatchmakingCallback implements SteamMatchmakingCallback{
 
 	@Override
 	public void onLobbyDataUpdate(SteamID steamIDLobby, SteamID steamIDMember, boolean success) {
-	
+
 	}
 
 	@Override
 	public void onLobbyChatUpdate(SteamID steamIDLobby, SteamID steamIDUserChanged, SteamID steamIDMakingChange,
 			ChatMemberStateChange stateChange) {
-		
+
 	}
 
 	@Override
 	public void onLobbyChatMessage(SteamID steamIDLobby, SteamID steamIDUser, ChatEntryType entryType, int chatID) {
 		messages.add(new LobbyMessage());
 		LobbyMessage message = messages.get(messages.size() - 1);
-		
+
 		ByteBuffer buffer = ByteBuffer.allocateDirect(Steam.BUFFERSIZE);
 		int size = 0;
-		
+
 		try {
 			size = Steam.Lobby.get().getLobbyChatEntry(steamIDLobby, chatID, message.getChatEntry(), buffer);
 		} catch (SteamException e) {
 			e.printStackTrace();
-		} 
-		
+		}
+
 		message.setMessage(buffer, size);
 		System.out.println(message.getUserMessage());
 	}
 
 	@Override
 	public void onLobbyGameCreated(SteamID steamIDLobby, SteamID steamIDGameServer, int ip, short port) {
-		
+
 	}
 
 	@Override
 	public void onLobbyMatchList(int lobbiesMatching) {
 		lobbyCount = lobbiesMatching;
-		if(joinAttempt != 0) {
+		if (joinAttempt != 0) {
 			SteamID lobby = Steam.Lobby.search(joinAttempt, lobbyCount);
-			if(lobby != null) Steam.Lobby.join(lobby);
+			if (lobby != null)
+				Steam.Lobby.join(lobby);
 			joinAttempt = 0;
 		}
 	}
 
 	@Override
 	public void onLobbyKicked(SteamID steamIDLobby, SteamID steamIDAdmin, boolean kickedDueToDisconnect) {
-		
+
 	}
 
 	@Override
 	public void onLobbyCreated(SteamResult result, SteamID steamIDLobby) {
-		if(result == SteamResult.OK) {
+		if (result == SteamResult.OK) {
 			lobbyID = steamIDLobby;
 			Steam.Lobby.sendMessage(Steam.Friends.getUsername(Steam.User.getID()) + " has joined the lobby!");
 			System.out.println("Lobby Created with ID: " + steamIDLobby.getAccountID());
 		}
 	}
-	
+
 	@Override
 	public void onFavoritesListAccountsUpdated(SteamResult result) {
-		
+
 	}
-	
+
 }

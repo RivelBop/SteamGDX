@@ -9,40 +9,40 @@ import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.rivelbop.steam.Steam;
 
 public class SteamGDX extends Game {
-	
+
 	public OrthographicCamera camera;
 	public StretchViewport viewport;
 	public SpriteBatch batch;
-	public static int screenHeight = 1080, screenWidth = screenHeight * 16/9;
-	
+	public static int screenHeight = 720, screenWidth = screenHeight * 16 / 9;
+
 	@Override
-	public void create () {
+	public void create() {
 		Steam.init(480);
-		
+
 		camera = new OrthographicCamera();
 		viewport = new StretchViewport(screenWidth, screenHeight, camera);
 		camera.update();
-		
+
 		batch = new SpriteBatch();
-		
+
 		setScreen(new LobbyMenu(this));
 	}
 
 	@Override
-	public void render () {
-		Steam.update(1/15f);
-		
+	public void render() {
+		Steam.update(1 / 15f);
+
 		Gdx.gl.glClearColor(0, 0, 0, 1);
-		Gdx.gl.glClear( GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT );
-		
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
 		super.render();
 	}
-	
+
 	@Override
-	public void dispose () {
+	public void dispose() {
 		Steam.dispose();
 		batch.dispose();
 		getScreen().dispose();
 	}
-	
+
 }

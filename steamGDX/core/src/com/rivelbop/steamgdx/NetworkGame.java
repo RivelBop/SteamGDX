@@ -13,79 +13,83 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.Screen;
 import com.codedisaster.steamworks.SteamID;
 import com.codedisaster.steamworks.SteamNetworking.P2PSend;
 import com.rivelbop.steam.PacketData;
 import com.rivelbop.steam.Steam;
 
-public class NetworkGame implements Screen{
-	
+public class NetworkGame implements Screen {
+
 	public SteamGDX steamGDX;
 	public HashMap<SteamID, PlayerData> players;
-	public final float SPEED = 50f;
-	public boolean movedX, movedY;
 	
-	public NetworkGame(SteamGDX game) {
+	private final float SPEED = 50f;
+	private float updateTimer;
+
+	public NetworkGame(SteamGDX game, HashMap<SteamID, PlayerData> players) {
 		steamGDX = game;
+		this.players = players;
 	}
-	
+
 	@Override
 	public void show() {
-		players = new HashMap<>();
-		for(SteamID player : Steam.Lobby.players()) {
-			players.put(player, new PlayerData());
-		}
+		
 	}
 
 	@Override
 	public void render(float delta) {
-		movedX = false;
-		movedY = false;
+		updateTimer += Gdx.graphics.getDeltaTime();
 		
-		if(Gdx.input.isKeyPressed(Keys.W)) {
+		if (Gdx.input.isKeyPressed(Keys.W))
 			players.get(Steam.User.getID()).sprite.translateY(SPEED * delta);
-			movedY = true;
-		}
-		if(Gdx.input.isKeyPressed(Keys.A)) {
+
+		if (Gdx.input.isKeyPressed(Keys.A))
 			players.get(Steam.User.getID()).sprite.translateX(-SPEED * delta);
-			movedX = true;
-		}
-		if(Gdx.input.isKeyPressed(Keys.S)) {
+
+		if (Gdx.input.isKeyPressed(Keys.S))
 			players.get(Steam.User.getID()).sprite.translateY(-SPEED * delta);
-			movedY = true;
-		}
-		if(Gdx.input.isKeyPressed(Keys.D)) {
+		
+		if (Gdx.input.isKeyPressed(Keys.D))
 			players.get(Steam.User.getID()).sprite.translateX(SPEED * delta);
-			movedX = true;
+		
+		if(updateTimer > 0.15f) {
+			for(SteamID p : players.keySet())
+				Steam.Network.sendPacket(p, "x" + players.get(Steam.User.getID()).sprite.getX() +
+						"y" + players.get(Steam.User.getID()).sprite.getY(), P2PSend.Reliable,
+						Steam.Channel.MESSAGE);
+			updateTimer = 0f;
 		}
 		
-		if(movedX) Steam.Lobby.sendPacket("X: " + players.get(Steam.User.getID()).sprite.getX(), P2PSend.ReliableWithBuffering, Steam.Channel.MESSAGE);
-		if(movedY) Steam.Lobby.sendPacket("Y: " + players.get(Steam.User.getID()).sprite.getY(), P2PSend.ReliableWithBuffering, Steam.Channel.MESSAGE);
+		if (Gdx.input.isKeyJustPressed(Input.Keys.F))
+			Steam.User.startVoice();
 		
-		if(Gdx.input.isKeyJustPressed(Input.Keys.F)) Steam.User.startVoice();
-		Steam.User.sendVoiceToLobby(P2PSend.ReliableWithBuffering);
-		if(!Gdx.input.isKeyPressed(Input.Keys.F)) Steam.User.stopVoice();
+		for(SteamID p : players.keySet())
+			Steam.User.sendVoiceToUser(p, P2PSend.Reliable);
+		
+		if (!Gdx.input.isKeyPressed(Input.Keys.F))
+			Steam.User.stopVoice();
 		
 		PacketData packet = Steam.Network.receivePacket(Steam.Channel.MESSAGE);
-		if(packet != null) {
+		if (packet != null) {
 			String message = packet.message;
-			if(message.contains("X: ")) {
-				players.get(packet.user).sprite.setX(Float.parseFloat(message.substring(3)));
-			}else if(message.contains("Y: ")) {
-				players.get(packet.user).sprite.setY(Float.parseFloat(message.substring(3)));
-			}
+			int msgY = message.indexOf("y");
+			
+			
+			
+			players.get(packet.user).sprite.setX(Float.parseFloat(message.substring(message.indexOf("x") + 1, msgY)));
+			players.get(packet.user).sprite.setY(Float.parseFloat(message.substring(msgY + 1)));
 		}
 		
 		packet = Steam.Network.receivePacket(Steam.Channel.VOICE);
-		if(packet != null) {
+		if (packet != null) {
 			byte[] bytes = new byte[Steam.VOICEBUFFERSIZE];
 			packet.buffer.get(bytes);
-			System.out.println(bytes);
 			ByteArrayInputStream oInstream = new ByteArrayInputStream(bytes);
 			try {
 				AudioInputStream oAIS = AudioSystem.getAudioInputStream(oInstream);
-				
+
 				try {
 					Clip clip = AudioSystem.getClip();
 					clip.open(oAIS);
@@ -101,7 +105,8 @@ public class NetworkGame implements Screen{
 		}
 		
 		steamGDX.batch.begin();
-		for(PlayerData player : players.values()) player.sprite.draw(steamGDX.batch);
+		for (PlayerData player : players.values())
+			player.sprite.draw(steamGDX.batch);
 		steamGDX.batch.end();
 	}
 
@@ -112,22 +117,22 @@ public class NetworkGame implements Screen{
 
 	@Override
 	public void pause() {
-		
+
 	}
 
 	@Override
 	public void resume() {
-		
+
 	}
 
 	@Override
 	public void hide() {
-		
+
 	}
 
 	@Override
 	public void dispose() {
-		
+
 	}
 
 }

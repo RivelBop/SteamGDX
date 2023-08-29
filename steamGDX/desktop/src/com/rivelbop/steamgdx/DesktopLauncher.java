@@ -10,7 +10,6 @@ public class DesktopLauncher {
 		config.useVsync(true);
 		config.setTitle("SteamGDX");
 		config.setWindowedMode(SteamGDX.screenWidth, SteamGDX.screenHeight);
-		//config.setFullscreenMode(Lwjgl3ApplicationConfiguration.getDisplayMode());
 		new Lwjgl3Application(new SteamGDX(), config);
 	}
 }

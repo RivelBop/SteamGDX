@@ -54,7 +54,7 @@ public class NetworkGame implements Screen {
 		if (Gdx.input.isKeyPressed(Keys.D))
 			players.get(Steam.User.getID()).sprite.translateX(SPEED * delta);
 		
-		if(updateTimer > 0.15f) {
+		if(updateTimer > 0.10f) {
 			for(SteamID p : players.keySet())
 				Steam.Network.sendPacket(p, "x" + players.get(Steam.User.getID()).sprite.getX() +
 						"y" + players.get(Steam.User.getID()).sprite.getY(), P2PSend.Reliable,
@@ -75,8 +75,6 @@ public class NetworkGame implements Screen {
 		if (packet != null) {
 			String message = packet.message;
 			int msgY = message.indexOf("y");
-			
-			
 			
 			players.get(packet.user).sprite.setX(Float.parseFloat(message.substring(message.indexOf("x") + 1, msgY)));
 			players.get(packet.user).sprite.setY(Float.parseFloat(message.substring(msgY + 1)));

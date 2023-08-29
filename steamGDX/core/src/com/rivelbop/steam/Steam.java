@@ -157,8 +157,9 @@ public class Steam {
 	public static class User {
 
 		private static boolean voiceStarted;
-
+		
 		// Starts voice recording from microphone
+		@Deprecated
 		public static void startVoice() {
 			if (!voiceStarted) {
 				user.startVoiceRecording();
@@ -168,6 +169,7 @@ public class Steam {
 		}
 
 		// Send a Voice Message to the specified SteamID
+		@Deprecated
 		public static void sendVoiceToUser(SteamID id, P2PSend packetType) {
 			int[] voiceBytes = new int[1];
 			VoiceResult result = user.getAvailableVoice(voiceBytes);
@@ -185,6 +187,7 @@ public class Steam {
 		}
 
 		// Send a Voice Message to the Lobby the user is currently inside of
+		@Deprecated
 		public static void sendVoiceToLobby(P2PSend packetType) {
 			int[] voiceBytes = new int[1];
 			VoiceResult result = user.getAvailableVoice(voiceBytes);
@@ -202,6 +205,7 @@ public class Steam {
 		}
 
 		// Retrieves the audio data from a provided Voice Buffer
+		@Deprecated
 		public static ByteBuffer getVoice(ByteBuffer buffer) {
 			int[] bytesWritten = new int[1];
 			ByteBuffer audio = ByteBuffer.allocateDirect(VOICEBUFFERSIZE);
@@ -219,6 +223,7 @@ public class Steam {
 		}
 
 		// Stops voice recording from microphone
+		@Deprecated
 		public static void stopVoice() {
 			if (voiceStarted) {
 				user.stopVoiceRecording();
